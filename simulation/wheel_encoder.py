@@ -1,0 +1,74 @@
+import sys
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import differential_evolution
+
+home = "/home/filip/Desktop/informatika/mg-team-eurobot"
+
+sys.path.append(os.path.abspath(home + "/simulation"))
+from system import *
+from functions import *
+
+# Function that convert encoder counts to radians
+def counts_to_radians(data, counts_per_revolution=8000):
+    return data * (2 * np.pi / counts_per_revolution)
+
+def estimated_path(angular_velocity, dt):
+    angular_distance = [0]
+    for i, omega in enumerate(angular_velocity):
+        angular_distance.append(angular_distance[i] + omega*dt)
+
+    return np.array(angular_distance)
+
+def error(data, estimated_data):
+    return np.sum(np.square(data - estimated_data))
+
+def optimal_omega(data, sample_time):
+    def error_function(ulaz):
+        omega, sample_time = ulaz
+        differentiator = Differentiator(omega, sample_time)
+
+        estimated_angular_velocity = differentiator.inpute_response(data)
+        estimated_angular_distance = estimated_path(estimated_angular_velocity, sample_time)
+
+        return np.sum(np.square(estimated_angular_distance[1:] - data))
+
+    omega_min = 5
+    omega_max = 50
+    omega_range = [(omega_min, omega_max), (sample_time, sample_time)]
+    optimized_omega = differential_evolution(error_function, bounds=omega_range)
+
+    print(optimized_omega)
+    return optimized_omega.x[0]
+
+
+def main():
+    file_name = home + "/simulation/encoder_data/100hz10s1.csv"
+    data = counts_to_radians(import_data(file_name))
+
+    time = 10
+    sample_time = 0.01
+    omega = 40
+    omega = optimal_omega(data, sample_time)
+
+    differentiator = Differentiator(omega, sample_time)
+    angular_velocity = differentiator.inpute_response(data)
+    angular_distance = estimated_path(angular_velocity, sample_time)
+
+    # Plot the system response
+    what_to_plot = 2
+    if what_to_plot == 1:
+        plt.plot(np.arange(0, time, sample_time), angular_velocity, label="advanced differentiator")
+        plt.plot(np.arange(0, time, sample_time), simple_differentiator(data, sample_time), label="simple differentiator")
+    elif what_to_plot == 2:
+        plt.plot(np.arange(0, time, sample_time), data, label="encoder value")
+        plt.plot(np.arange(0, time, sample_time), angular_distance[1:], label="estimated encoder value")
+
+    plt.legend(loc="upper left")
+    plt.grid()
+    plt.show()
+
+if __name__=="__main__":
+    # example()
+    main()
