@@ -1,6 +1,8 @@
 import csv
+import serial
 import numpy as np
 
+# Import data from existing csv file
 def import_data(file_path):
     data = []
     with open(file_path, 'r') as file:
@@ -9,6 +11,17 @@ def import_data(file_path):
             data.append(int(row[0]))
     
     return np.array(data)
+
+
+# Init Pyserial
+def init_serial(port, baud_rate=9600):
+    pass
+
+
+# Read data from Serial
+def read_data():
+    pass
+
 
 def simple_differentiator(system_input, sample_time):
     output = [0]
