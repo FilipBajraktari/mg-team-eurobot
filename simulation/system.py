@@ -27,6 +27,10 @@ class System:
 
         return output
 
+    def params(self):
+        print(self.sys_ss)
+        return  self.sys_ss
+
 class Differentiator(System):
     def __init__(self, omega, sample_time):
         super().__init__([omega, 0], [1, omega], sample_time)
