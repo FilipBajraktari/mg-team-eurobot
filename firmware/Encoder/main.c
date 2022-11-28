@@ -59,6 +59,6 @@ void TIM2_IRQHandler(void) //TIMER 2 INTERRUPT HANDLER
 {
 	TIM2->SR &= ~(TIM_SR_UIF); 
 	
-	print("data:%d\r\n", encoderCount32bit(tim32bit));
+	print("%d\r\n", encoderCount32bit(tim32bit));
 	//print("data:%d\r\n", encoderCount16bit(tim16bit_m, tim16bit_s));
 }
