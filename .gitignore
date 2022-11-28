@@ -1,3 +1,6 @@
 */__pycache__
 
-/simulation/encoder_data
+/simulation/encoder_data/100hz10s1.csv
+/simulation/encoder_data/500hz10s1.csv
+/simulation/encoder_data/1000hz10s1.csv
+/simulation/encoder_data/2000hz.csv
