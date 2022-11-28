@@ -58,21 +58,21 @@ def optimal_omega(data, sample_time):
 
 def main():
 
-    # Differentiator
-    omega = 41
-    # omega = optimal_omega(data, sample_time)
-    differentiator = Differentiator(omega, sample_time)
-    differentiator.params()
-
-
     if TESTING_FILE:
-        print("In testing file!!!")
-        exit()
+        ser = init_serial()
+        read_data(ser, writing_path = os.path.abspath(home + "/encoder_data/testing.csv"), number_of_samples=30000)
+        data_file = home + "/encoder_data/testing.csv"
     else:    
         data_file = home + "/encoder_data/1000hz10s1.csv"
 
-
     data = counts_to_radians(import_data(data_file))
+
+    # Differentiator
+    omega = 41
+    omega = optimal_omega(data, sample_time)
+    differentiator = Differentiator(omega, sample_time)
+    differentiator.params()
+
     angular_velocity = differentiator.inpute_response(data)
     angular_distance = estimated_path(angular_velocity, sample_time)
 
