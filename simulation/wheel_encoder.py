@@ -10,6 +10,7 @@ home = os.path.dirname(os.path.realpath("wheel_encoder.py"))
 sys.path.append(os.path.abspath(home + "/simulation"))
 from system import *
 from functions import *
+from import_data import *
 
 
 parser = argparse.ArgumentParser()
@@ -52,7 +53,7 @@ def optimal_omega(data, sample_time):
     omega_range = [(omega_min, omega_max), (sample_time, sample_time)]
     optimized_omega = differential_evolution(error_function, bounds=omega_range)
 
-    print(optimized_omega)
+    print(optimized_omega, end="\n\n")
     return optimized_omega.x[0]
 
 
@@ -63,13 +64,13 @@ def main():
         read_data(ser, writing_path = os.path.abspath(home + "/encoder_data/testing.csv"), number_of_samples=30000)
         data_file = home + "/encoder_data/testing.csv"
     else:    
-        data_file = home + "/encoder_data/1000hz10s1.csv"
+        data_file = home + "/encoder_data/10000hz.csv"
 
     data = counts_to_radians(import_data(data_file))
 
     # Differentiator
-    omega = 41
-    omega = optimal_omega(data, sample_time)
+    omega = 81
+    # omega = optimal_omega(data, sample_time)
     differentiator = Differentiator(omega, sample_time)
     differentiator.params()
 
@@ -88,10 +89,9 @@ def main():
         plt.plot(np.arange(0, time, sample_time), angular_distance[1:], label="estimated encoder value")
         # plt.plot(np.arange(0, time, sample_time), angular_distance[1:] - data, label="estimated encoder value")
 
-    plt.legend(loc="upper left")
+    plt.legend(loc="upper right")
     plt.grid()
     plt.show()
 
 if __name__=="__main__":
-    # example()
     main()

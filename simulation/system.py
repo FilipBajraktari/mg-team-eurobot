@@ -31,6 +31,19 @@ class System:
         print(self.sys_ss)
         return  self.sys_ss
 
+
 class Differentiator(System):
     def __init__(self, omega, sample_time):
         super().__init__([omega, 0], [1, omega], sample_time)
+
+
+def state_space_1D(data, A, B, C, D):
+    previous = 0
+    filtered_data = []
+    for next_data in data:
+        x = A*previous + B*next_data
+        y = C*previous + D*next_data
+        previous = x
+        filtered_data.append(y)
+
+    return filtered_data
