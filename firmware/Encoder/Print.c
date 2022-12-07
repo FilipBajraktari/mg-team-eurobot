@@ -1,7 +1,19 @@
 #include "Print.h"
 
-void printInit(USART_TypeDef *UART)
+static uint32_t baudrateLUT[] = {9600, 19200, 57600, 115200, 230400, 500000, 1000000, 1500000, 2000000};
+static USART_TypeDef *P_UART;
+
+int printInit(USART_TypeDef *UART, uint32_t baudrate)
 {
+	if(UART != USART2) return Print_ERR2;
+	
+	int p = 0;
+	for(uint32_t i = 0; i < (sizeof(baudrateLUT) / sizeof(uint32_t)); i++)
+	{
+		if(baudrate == baudrateLUT[i]) p = 1;
+	}
+	if(p == 0) return Print_ERR1;
+	
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN; //GPIO A  ENABLE
 	RCC->APB1ENR |= RCC_APB1ENR_USART2EN; //UART2 ENABLE
 	
@@ -17,13 +29,24 @@ void printInit(USART_TypeDef *UART)
 	UART->CR1 |= USART_CR1_TE; //USART2 TRANSMITTER ENABLE
 	UART->CR1 |= USART_CR1_RE; //USART2 RECIEVER ENABLE
 	
-	//USART2->BRR = 0x0016C; //BAUD 115200
-	UART->BRR = 0x13; //BAUD 2200000
-	//USART2->BRR = (uint32_t)(42000000 / (16 * baudrate)) << 4;
-
+	switch (baudrate)
+	{
+		case(9600): UART->BRR = 0x1117; break;
+		case(19200): UART->BRR = 0x88B; break;
+		case(57600): UART->BRR = 0x2D9; break;
+		case(115200): UART->BRR = 0x16C; break;
+		case(230400): UART->BRR = 0xB6; break;
+		case(500000): UART->BRR = 0x54; break;
+		case(1000000): UART->BRR = 0x2A; break;
+		case(1500000): UART->BRR = 0x1C; break;
+		case(2000000): UART->BRR = 0x15; break;
+	}
+	
 	UART->CR1 |= USART_CR1_UE; //USART2 ENABLE
 	
 	P_UART = UART;
+	
+	return Print_OK;
 }
 
 void print(char *msg, ...)
@@ -41,3 +64,14 @@ void print(char *msg, ...)
 	}
 	
 }
+
+void printSupportedBaudrates(void)
+{
+	print("Suported baudrates:\r\n");
+	
+	for(uint32_t i = 0; i < (sizeof(baudrateLUT) / sizeof(uint32_t)); i++)
+	{
+		print("%d\r\n", baudrateLUT[i]);
+	}
+}
+

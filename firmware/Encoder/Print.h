@@ -7,9 +7,14 @@
 #include "stdlib.h"
 #include "stdarg.h"
 
-static USART_TypeDef *P_UART;
+typedef enum {
+  Print_OK = 0,
+  Print_ERR1 = 1,
+	Print_ERR2 = 2,
+}Print_Error;
 
-void printInit(USART_TypeDef *UART);	
+int printInit(USART_TypeDef *UART, uint32_t baudrate);	
 void print(char *msg, ...);
+void printSupportedBaudrates(void);
 
 #endif

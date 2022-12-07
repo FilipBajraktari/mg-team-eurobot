@@ -22,15 +22,50 @@ Dialog DLL:      TCM.DLL V1.56.1.0
  
 <h2>Project:</h2>
 C:\Users\Korisnik\Desktop\workspace\mg-team-eurobot\firmware\Encoder\encoder.uvprojx
-Project File Date:  11/23/2022
+Project File Date:  12/07/2022
 
 <h2>Output:</h2>
 *** Using Compiler 'V6.18', folder: 'C:\Keil_v5\ARM\ARMCLANG\Bin'
 Build target 'Target 1'
+main.c(12): warning: no previous prototype for function 'counts_to_radian' [-Wmissing-prototypes]
+double counts_to_radian(double count) {return (count * 2.0 * PI) / 8000.0;}
+       ^
+main.c(12): note: declare 'static' if the function is not intended to be used outside of this translation unit
+double counts_to_radian(double count) {return (count * 2.0 * PI) / 8000.0;}
+^
+static 
+main.c(32): warning: no previous extern declaration for non-static variable 'right_wheel_x' [-Wmissing-variable-declarations]
+double right_wheel_x = 0;
+       ^
+main.c(32): note: declare 'static' if the variable is not intended to be used outside of this translation unit
+double right_wheel_x = 0;
+^
+main.c(33): warning: no previous extern declaration for non-static variable 'right_wheel_omega' [-Wmissing-variable-declarations]
+double right_wheel_omega = 0;
+       ^
+main.c(33): note: declare 'static' if the variable is not intended to be used outside of this translation unit
+double right_wheel_omega = 0;
+^
+main.c(34): warning: no previous extern declaration for non-static variable 'left_wheel_x' [-Wmissing-variable-declarations]
+double left_wheel_x = 0;
+       ^
+main.c(34): note: declare 'static' if the variable is not intended to be used outside of this translation unit
+double left_wheel_x = 0;
+^
+main.c(35): warning: no previous extern declaration for non-static variable 'left_wheel_omega' [-Wmissing-variable-declarations]
+double left_wheel_omega = 0;
+       ^
+main.c(35): note: declare 'static' if the variable is not intended to be used outside of this translation unit
+double left_wheel_omega = 0;
+^
+main.c(78): warning: mixing declarations and code is incompatible with standards before C99 [-Wdeclaration-after-statement]
+        double encoder_count, x, y;
+               ^
+6 warnings generated.
 compiling main.c...
 linking...
-Program Size: Code=8012 RO-data=980 RW-data=0 ZI-data=1640  
-".\Objects\encoder.axf" - 0 Error(s), 0 Warning(s).
+Program Size: Code=14864 RO-data=1300 RW-data=68 ZI-data=1704  
+".\Objects\encoder.axf" - 0 Error(s), 6 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -57,10 +92,10 @@ Package Vendor: Keil
 
    * Component: Keil::Device:Startup:2.6.3
       Source file:   Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/system_stm32f4xx.c
-      Source file:   MDK/Device/Source/ARM/STM32F4xx_OTP.s
       Include file:  Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h
-      Source file:   Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/arm/startup_stm32f401xe.s
       Source file:   MDK/Device/Source/ARM/STM32F401xx_OPT.s
+      Source file:   MDK/Device/Source/ARM/STM32F4xx_OTP.s
+      Source file:   Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/arm/startup_stm32f401xe.s
 Build Time Elapsed:  00:00:01
 </pre>
 </body>
