@@ -73,7 +73,6 @@ void TIM2Init(void)
 		
 }
 
-static int i = 0;
 static double y;
 static double x;
 static double encoder_count;
@@ -110,15 +109,14 @@ void TIM2_IRQHandler(void) //TIMER 2 INTERRUPT HANDLER
 	RobotX += vX*sample_time;
 	RobotY += vY*sample_time;
 
-	if(i == 1000)
+	if(USART2->SR & USART_SR_RXNE)
 	{
+		USART2->SR &= ~USART_SR_RXNE;
 		//print("%d\r\n", encoderCount16bit(tim16bit));
 		print("%d\r\n", encoderCount32bit(tim32bit));
 		//print("%d  --  %d\r\n", encoderCount16bit(tim16bit), encoderCount32bit(tim32bit));
 		//print("%f;%f;%f\n", RobotX, RobotY, RobotRot);
-		i = 0;
 	}
-	i++;
 }
 
 double counts_to_radian(double count)

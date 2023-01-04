@@ -428,13 +428,6 @@
         </Group>
         <Group>
           <GroupName>::CMSIS</GroupName>
-          <Files>
-            <File>
-              <FileName>TIM_EncMode.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\TIM_EncMode.c</FilePath>
-            </File>
-          </Files>
         </Group>
         <Group>
           <GroupName>::Device</GroupName>
