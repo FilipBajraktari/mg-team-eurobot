@@ -61,12 +61,13 @@ def main():
 
     if TESTING_FILE:
         ser = init_serial()
-        read_data(ser, writing_path = os.path.abspath(home + "/encoder_data/testing.csv"), number_of_samples=30000)
+        read_data(ser, writing_path = os.path.abspath(home + "/encoder_data/testing.csv"), number_of_samples=25000)
         data_file = home + "/encoder_data/testing.csv"
     else:    
         data_file = home + "/encoder_data/10000hz.csv"
 
-    data = counts_to_radians(import_data(data_file))
+    # data = counts_to_radians(import_data(data_file))
+    data = import_data(data_file)
 
     # Differentiator
     omega = 81
@@ -86,7 +87,7 @@ def main():
         plt.plot(np.arange(0, time, sample_time), simple_differentiator(data, sample_time), label="simple differentiator")
     elif what_to_plot == 2:
         plt.plot(np.arange(0, time, sample_time), data, label="encoder value")
-        plt.plot(np.arange(0, time, sample_time), angular_distance[1:], label="estimated encoder value")
+        # plt.plot(np.arange(0, time, sample_time), angular_distance[1:], label="estimated encoder value")
         # plt.plot(np.arange(0, time, sample_time), angular_distance[1:] - data, label="estimated encoder value")
 
     plt.legend(loc="upper right")

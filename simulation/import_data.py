@@ -10,13 +10,14 @@ def import_data(file_path):
     with open(file_path, 'r') as file:
         csvreader = csv.reader(file)
         for row in csvreader:
-            data.append(int(row[0]))
+            # data.append(int(row[0]))
+            data.append(float(row[0]))
     
     return np.array(data)
 
 
 # Init Pyserial
-def init_serial(port_val=3, baud_rate=2200000):
+def init_serial(port_val=3, baud_rate=2000000):
     ports = serial.tools.list_ports.comports()
     ser = serial.Serial()
     portList = []
@@ -57,6 +58,7 @@ def read_data(ser, writing_path, number_of_samples=5000):
     while i < number_of_samples:
         if ser.inWaiting():
             s = ser.readline().decode('utf').rstrip('\r\n')
-            csvwriter.writerow({'pos':int(s)})
+            csvwriter.writerow({'pos':float(s)})
+            # print(s)
             i += 1
     f.close()
