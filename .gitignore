@@ -7,3 +7,6 @@
 /simulation/encoder_data/1000hz10s1.csv
 /simulation/encoder_data/2000hz.csv
 /simulation/encoder_data/10000hz.csv
+
+/testing/example-service.py
+/testing/example-client.py
