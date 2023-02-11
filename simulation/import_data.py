@@ -26,8 +26,8 @@ def init_serial(port_val=3, baud_rate=2000000):
         portList.append(str(p))
         print(str(p))
 
-    # val = input("select port: COM")
-    val = port_val # Filip 3   Kosta 7
+    val = input("select port: COM")
+    #val = port_val # Filip 3   Kosta 7
 
     for x in range(0, len(portList)):
         if portList[x].startswith("COM" + str(val)):
