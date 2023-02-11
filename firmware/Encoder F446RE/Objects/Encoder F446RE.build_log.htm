@@ -5,7 +5,7 @@
 <h2>Tool Versions:</h2>
 IDE-Version: µVision V5.37.0.0
 Copyright (C) 2022 ARM Ltd and ARM Germany GmbH. All rights reserved.
-License Information: Kosta Stojanovic, MG, LIC=----
+License Information: Filip Bajraktari, MG, LIC=----
  
 Tool Versions:
 Toolchain:       MDK-Lite  Version: 5.37.0.0
@@ -21,16 +21,32 @@ Target DLL:      STLink\ST-LINKIII-KEIL_SWO.dll V3.0.9.0
 Dialog DLL:      TCM.DLL V1.56.1.0
  
 <h2>Project:</h2>
-C:\Users\Kosta Stojanovic\Documents\mg-team-eurobot\firmware\Encoder F446RE\Encoder F446RE.uvprojx
-Project File Date:  01/04/2023
+C:\Users\Korisnik\Desktop\workspace\mg-team-eurobot\firmware\Encoder F446RE\Encoder F446RE.uvprojx
+Project File Date:  02/02/2023
 
 <h2>Output:</h2>
 *** Using Compiler 'V6.18', folder: 'C:\Keil_v5\ARM\ARMCLANG\Bin'
-Build target 'Target 1'
+Rebuild target 'Target 1'
+compiling NucleoSetup.c...
 compiling main.c...
+compiling TIM_EncMode.c...
+assembling startup_stm32f446xx.s...
+compiling system_stm32f4xx.c...
+Print.c(10): warning: mixing declarations and code is incompatible with standards before C99 [-Wdeclaration-after-statement]
+        int p = 0;
+            ^
+Print.c(58): warning: implicitly declaring library function 'vsprintf' with type 'int (char *, const char *, __builtin_va_list)' [-Wimplicit-function-declaration]
+        vsprintf(buff, msg, args);
+        ^
+Print.c(58): note: include the header <stdio.h> or explicitly provide a declaration for 'vsprintf'
+Print.c(58): warning: format string is not a string literal [-Wformat-nonliteral]
+        vsprintf(buff, msg, args);
+                       ^~~
+3 warnings generated.
+compiling Print.c...
 linking...
-Program Size: Code=14832 RO-data=1344 RW-data=68 ZI-data=1752  
-".\Objects\Encoder F446RE.axf" - 0 Error(s), 0 Warning(s).
+Program Size: Code=14896 RO-data=1356 RW-data=68 ZI-data=1752  
+".\Objects\Encoder F446RE.axf" - 0 Error(s), 3 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -48,8 +64,8 @@ Package Vendor: Keil
 
 <h2>Collection of Component include folders:</h2>
   ./RTE/_Target_1
-  C:/Users/Kosta Stojanovic/AppData/Local/Arm/Packs/ARM/CMSIS/5.9.0/CMSIS/Core/Include
-  C:/Users/Kosta Stojanovic/AppData/Local/Arm/Packs/Keil/STM32F4xx_DFP/2.16.0/Drivers/CMSIS/Device/ST/STM32F4xx/Include
+  C:/Users/Korisnik/AppData/Local/Arm/Packs/ARM/CMSIS/5.9.0/CMSIS/Core/Include
+  C:/Users/Korisnik/AppData/Local/Arm/Packs/Keil/STM32F4xx_DFP/2.16.0/Drivers/CMSIS/Device/ST/STM32F4xx/Include
 
 <h2>Collection of Component Files used:</h2>
 

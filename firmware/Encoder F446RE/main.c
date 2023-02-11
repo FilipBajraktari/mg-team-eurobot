@@ -18,8 +18,8 @@ static const uint32_t sample_frequency = 10000;
 static const double sample_time = 1.0 / sample_frequency;
 
 //Robot Constants
-static const double Wheel_Distance = 30.0;
-static const double Wheel_radius = 8.0;
+static const double Wheel_Distance = 31.5;
+static const double Wheel_radius = 9.5;
 
 //Robot State
 static double RobotRot = 0.0;
@@ -103,7 +103,7 @@ void TIM2_IRQHandler(void) //TIMER 2 INTERRUPT HANDLER
 	// Coordinates
 	vX = (left_wheel_omega+right_wheel_omega)*Wheel_radius*0.5*cos(RobotRot);
 	vY = (left_wheel_omega+right_wheel_omega)*Wheel_radius*0.5*sin(RobotRot);
-	vRot = (right_wheel_omega-left_wheel_omega)*Wheel_radius/(2*Wheel_Distance);
+	vRot = (right_wheel_omega-left_wheel_omega)*Wheel_radius/Wheel_Distance;
 	
 	RobotRot += vRot*sample_time;
 	RobotX += vX*sample_time;
@@ -113,9 +113,11 @@ void TIM2_IRQHandler(void) //TIMER 2 INTERRUPT HANDLER
 	{
 		USART2->SR &= ~USART_SR_RXNE;
 		//print("%d\r\n", encoderCount16bit(tim16bit));
-		print("%d\r\n", encoderCount32bit(tim32bit));
-		//print("%d  --  %d\r\n", encoderCount16bit(tim16bit), encoderCount32bit(tim32bit));
+		//print("%d\r\n", encoderCount32bit(tim32bit));
+		//print("%f %f\r\n", left_wheel_omega, right_wheel_omega);
 		//print("%f;%f;%f\n", RobotX, RobotY, RobotRot);
+		print("%f %f %f %f %f\r\n", RobotX, RobotY, RobotRot, left_wheel_omega, right_wheel_omega);
+		//print("%f %f %f %f %f %d %d\r\n", RobotX, RobotY, RobotRot, left_wheel_omega, right_wheel_omega, encoderCount16bit(tim16bit), encoderCount32bit(tim32bit));
 	}
 }
 
@@ -123,6 +125,3 @@ double counts_to_radian(double count)
 {
 	return (count * 2.0 * PI) / 8000.0;
 }
-
-	
-
