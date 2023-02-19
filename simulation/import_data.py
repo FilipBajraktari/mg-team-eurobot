@@ -17,7 +17,7 @@ def import_data(file_path):
 
 
 # Init Pyserial
-def init_serial(port_val=3, baud_rate=115200):
+def init_serial(port_val=None, baud_rate=115200):
     ports = serial.tools.list_ports.comports()
     ser = serial.Serial()
     portList = []
@@ -26,8 +26,10 @@ def init_serial(port_val=3, baud_rate=115200):
         portList.append(str(p))
         print(str(p))
 
-    val = port_val # Filip 3   Kosta 7
-    val = input("select port: /dev/ttyACM")
+    if port_val == None:
+        val = input("select port: /dev/ttyACM")
+    elif port_val >= 0:
+        val = port_val
 
     for x in range(0, len(portList)):
         if portList[x].startswith("/dev/ttyACM" + str(val)):
