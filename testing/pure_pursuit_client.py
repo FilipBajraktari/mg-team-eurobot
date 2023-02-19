@@ -8,19 +8,19 @@ import dbus.service
 import dbus.mainloop.glib
 
 # LOOKAHEAD POSITION COORDINATES
-x_coordinate = None
-y_coordinate = None
-theta = None
+x_lookahead = None
+y_lookahead = None
+theta_lookahead = None
 
 def catchall_new_lookahead(lookahead_postion):
-    global x_coordinate, y_coordinate, theta
-    x_coordinate, y_coordinate, theta = lookahead_postion
+    global x_lookahead, y_lookahead, theta_lookahead
+    x_lookahead, y_lookahead, theta_lookahead = lookahead_postion
 
 def pure_pursuit(iface):
     time.sleep(0.5) # Time to setup Glib mainloop
 
     while True:
-        # print("Lookahead position:\t", x_coordinate, y_coordinate, theta, sep=" ")
+        print("Lookahead position:\t", x_lookahead, y_lookahead, theta_lookahead, sep=" ")
         # print(type(iface.get_random_state_space()[0]))
         time.sleep(1)
 

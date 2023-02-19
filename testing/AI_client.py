@@ -15,6 +15,8 @@ def main():
 
     while True:
         # AI STUFF
+        current_state_space = iface.get_random_state_space()
+        iface_ai.emit_new_desired_position([0,0,0])
         time.sleep(1)
 
 if __name__ == '__main__':

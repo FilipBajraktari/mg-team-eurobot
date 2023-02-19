@@ -9,13 +9,15 @@ def custom_canvas():
     ax.set_ylim(-100, 100)
 
     # Major ticks every 20, minor ticks every 5
-    major_ticks = np.arange(-150, 151, 50)
-    minor_ticks = np.arange(-150, 151, 5)
+    x_major_ticks = np.arange(-150, 151, 50)
+    x_minor_ticks = np.arange(-150, 151, 5)
+    y_major_ticks = np.arange(-100, 101, 50)
+    y_minor_ticks = np.arange(-100, 101, 5)
 
-    ax.set_xticks(major_ticks)
-    ax.set_xticks(minor_ticks, minor=True)
-    ax.set_yticks(major_ticks)
-    ax.set_yticks(minor_ticks, minor=True)
+    ax.set_xticks(x_major_ticks)
+    ax.set_xticks(x_minor_ticks, minor=True)
+    ax.set_yticks(y_major_ticks)
+    ax.set_yticks(y_minor_ticks, minor=True)
 
     # And a corresponding grid
     ax.grid(which='both')
