@@ -18,7 +18,7 @@ def catchall_new_lookahead(lookahead_postion):
 
 def pure_pursuit(iface):
     time.sleep(0.5) # Time to setup Glib mainloop
-
+    
     while True:
         print("Lookahead position:\t", x_lookahead, y_lookahead, theta_lookahead, sep=" ")
         # print(type(iface.get_random_state_space()[0]))
