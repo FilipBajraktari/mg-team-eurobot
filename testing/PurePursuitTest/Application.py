@@ -1,17 +1,4 @@
 """
-    /TODO:
-    //|*Add an update velocity function
-    //|*Add point collides function
-    //|*Add path tracing... queue points on screen
-    //\   Add clicking to select
-    //|*Add path following
-    //|*Add enemy bots...
-    //|*Add pause/start
-    //|*Add obstacles
-    |*Add text based menu -- foundation
-    |*Add rt-rrt*
-"""
-"""
 A program to visualize pathfinding simulations for a differential 
 drive robot in python implented in pygame. Made for Eurobot2023
 
@@ -28,19 +15,25 @@ Implementation : 1. * Add map, make some sort of graphics for each of the elemen
 """
 ## Variables ##
 WINDOW_SIZE = (1200,800)
+LOCALTESTING = True
+NO_ODOMETRY = True
 
 ## Imports ##
 import tarfile
 from tracemalloc import start
 from xml.dom.expatbuilder import theDOMImplementation
 import numpy, sys, pygame, math, cairo, cmath
-from pygame.locals import *
+from pygame import *
 from PIL import Image
 from typing import List
 from Robot import RoboT
 from Obstacle import Obstacle
 import time
 import threading
+
+if not LOCALTESTING:
+    import odrive
+    my_drive = odrive.find_any()
 
 from gi.repository import GLib
 
@@ -55,9 +48,9 @@ __fb__ = pygame.display.set_mode(WINDOW_SIZE,0,32)
 __bg__ = pygame.image.load('table.png')
 __bg__ = pygame.transform.rotate(__bg__, 90).copy()
 __bg__ = pygame.transform.scale(__bg__, (1200,800))
-BotPic1 = pygame.transform.scale(pygame.image.load(r'OurRobot.png'), (4*21,4*21))
+BotPic1 = pygame.transform.scale(pygame.image.load(r'OurRobot.png'), (2*4*19.1,2*4*10))
 BotPic1 = pygame.transform.rotate(BotPic1, 180)
-BotPic2 = pygame.transform.scale(pygame.image.load(r'EvilRobot.png'), (4*21,4*21))
+BotPic2 = pygame.transform.scale(pygame.image.load(r'EvilRobot.png'), (2*4*19.1,2*4*19.1))
 BotPic2 = pygame.transform.rotate(BotPic2, 180)
 
 PAUSED = 1
@@ -88,12 +81,12 @@ def sgn (num):
         return -1
 
 def turnAngle(target,current):
-    current = math.degrees(current)
+    current = numpy.degrees(current)
     er = target - current
     
     if -180 > er or er > 180:
         er = er + sgn(er)*(-360) 
-    return math.radians(er)
+    return numpy.radians(er)
 
 def PurePursuit(robot: RoboT) -> tuple[float, float]:
     karot = None
@@ -114,13 +107,13 @@ def PurePursuit(robot: RoboT) -> tuple[float, float]:
     if(karot==None): return (0,0)
     
     linearError = numpy.sqrt((karot[0]-robot.x)**2+(karot[1]-robot.y)**2)
-    targetAngle = math.atan2 (karot[0]-robot.x, karot[1]-robot.y) * 180 / math.pi
+    targetAngle = numpy.arctan2(karot[0]-robot.x, karot[1]-robot.y) * 180 / numpy.pi
 
     turnError = turnAngle(targetAngle,robot.theta)
     
     v = max(0,numpy.cos(turnError))*linearError/2
     v *= 4
-    w = 2 * turnError # - cause of pygame
+    w = 5 * turnError # - cause of pygame
     
     robot.target = karot
     
@@ -156,12 +149,34 @@ def WriteToFB():
 
 ## Robots ##
 
-friendBOT = RoboT((0,0), BotPic1 , 21)
+friendBOT = RoboT((WINDOW_SIZE[0]/2,WINDOW_SIZE[1]/2), BotPic1 , 21)
 BotList = list([friendBOT])
-FieldObjects = list([friendBOT])
+FieldObjects = list([friendBOT])    
 
-## Application loop ##
-def AppLoop(iface):
+
+# LOOKAHEAD POSITION COORDINATES
+x_lookahead = None
+y_lookahead = None
+theta_lookahead = None
+
+def catchall_new_lookahead(lookahead_postion):
+    global x_lookahead, y_lookahead, theta_lookahead
+    x_lookahead, y_lookahead, theta_lookahead = lookahead_postion
+
+def pure_pursuit(iface):
+    time.sleep(0.5) # Time to setup Glib mainloop
+    
+    global friendBOT,BotList,FieldObjects
+    PAUSED = 1
+    RUNNING = 2
+    SELECT = 3
+    OBSTACLE = 4
+    WAYPOINTS = 5
+    ROBOT = 6
+
+
+    state = PAUSED
+
     clickMode = SELECT
     dt = 0
     lasttime = (pygame.time.get_ticks())
@@ -193,7 +208,11 @@ def AppLoop(iface):
                         FieldObjects.append( Obstacle((min(pos[0],spos[0]), min(pos[1],spos[1])), abs(pos[0]-spos[0]), abs(pos[1]-spos[1])))
             elif event.type == KEYDOWN:
                 if event.key == K_SPACE:
-                    if(state == RUNNING) : state = PAUSED
+                    if(state == RUNNING) : 
+                        state = PAUSED
+                        if not LOCALTESTING:
+                            my_drive.axis0.controller.input_vel = 0
+                            my_drive.axis1.controller.input_vel = 0
                     else : state = RUNNING
                 if event.key == K_f:
                     clickMode = OBSTACLE
@@ -210,39 +229,36 @@ def AppLoop(iface):
         
         if state == RUNNING:
             for x in BotList:
-                if X==friendBOT: continue
+                if x==friendBOT: 
+                    continue
                 vl, vr = PurePursuit(x)
                 x.SetState(vl,vr)
                 x.move(dt)
-            ncords=iface.get_random_state_space()
-            friendBOT.x=ncords[0]
-            friendBOT.y=ncords[1]
-            friendBOT.theta = ncords[2]
+            vl, vr = PurePursuit(friendBOT)
+            if NO_ODOMETRY:
+                friendBOT.SetState(vl,vr)
+                friendBOT.move(dt)
+            else:
+                if LOCALTESTING:
+                    ncords=iface.get_random_state_space()
+                else:
+                    ncords=iface.get_random_state_space()
+                    my_drive.axis0.controller.input_vel = vl/friendBOT.cm2p/5
+                    my_drive.axis1.controller.input_vel = vr/friendBOT.cm2p/5
+                friendBOT.dmove(ncords[0]*friendBOT.cm2p+WINDOW_SIZE[0]/2, 
+                            ncords[1]*friendBOT.cm2p+WINDOW_SIZE[1]/2, 
+                            -ncords[2]+numpy.pi/2)
+            
 
         WriteToFB()
                 
         pygame.display.update()
         __clock__.tick(60)
 
-
-# LOOKAHEAD POSITION COORDINATES
-x_lookahead = None
-y_lookahead = None
-theta_lookahead = None
-
-def catchall_new_lookahead(lookahead_postion):
-    global x_lookahead, y_lookahead, theta_lookahead
-    x_lookahead, y_lookahead, theta_lookahead = lookahead_postion
-
-def pure_pursuit(iface):
-    time.sleep(0.5) # Time to setup Glib mainloop
-    AppLoop(iface)
-    while True:
-        print("Lookahead position:\t", x_lookahead, y_lookahead, theta_lookahead, sep=" ")
-        print(type())
-        time.sleep(1)
-
 def main():
+    if NO_ODOMETRY:
+        pure_pursuit(None)
+        exit()
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     bus = dbus.SessionBus()
 

@@ -1,5 +1,6 @@
-import pygame, math
-from pygame.locals import *
+import pygame
+import math
+#from pygame import *
 
 
 class RoboT:
@@ -27,20 +28,35 @@ class RoboT:
     
     def draw(self, map: pygame.Surface):
         for x,y in zip(self.waypoints[:-1:],self.waypoints[1::]):
-            pygame.draw.line(map,color=(0,0,0),start_pos=x,end_pos=y,width=3)
-        for x in self.waypoints: pygame.draw.circle(map, color=(255,0,0) ,center=x, radius=2)
+            pygame.draw.line(map,(0,0,0),x,y,3)
+        for x in self.waypoints: pygame.draw.circle(map,(255,0,0) ,x,2)
         self.prevPos.append((self.x,self.y))
         if self.prevPosC>10000: self.prevPos.pop(0)
         else: self.prevPosC+=1
         for x,y in zip(self.prevPos[:-5:5],self.prevPos[5::5]):
-            pygame.draw.line(map,color=(0,255,255),start_pos=x,end_pos=y,width=3)
+            pygame.draw.line(map,(0,255,255),x,y,3)
 
         map.blit(self.roatated, self.rect)
-        if self.target != None : pygame.draw.circle(map, color=(0,255,0) ,center=self.target, radius=2)
+        
+        if self.target != None : 
+            self.target = int(self.target[0]),int(self.target[1])
+            pygame.draw.circle(map, (0,255,0) ,self.target, 2)
+
     def move(self,dt : float):
         self.y+=((self.vl+self.vr)/2)*math.cos(self.theta)*dt
         self.x+=((self.vl+self.vr)/2)*math.sin(self.theta)*dt
         self.theta+=(self.vr-self.vl)/self.width*dt
+        
+        if(self.theta>math.pi): self.theta += -2*math.pi
+        elif(self.theta<-math.pi): self.theta+= 2*math.pi
+        
+        self.roatated=pygame.transform.rotozoom(self.img,math.degrees(self.theta),1)
+        self.rect = self.roatated.get_rect(center = (self.x,self.y))
+    
+    def dmove(self, x: float, y: float, theta: float):
+        self.x=x
+        self.y=y
+        self.theta=theta
         
         if(self.theta>math.pi): self.theta += -2*math.pi
         elif(self.theta<-math.pi): self.theta+= 2*math.pi
