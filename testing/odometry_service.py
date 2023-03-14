@@ -9,7 +9,9 @@ import dbus
 import dbus.service
 import dbus.mainloop.glib
 
-file_name = "/home/filip/Desktop/informatika/mg-team-eurobot"
+#Added to work anywhere
+#file_name = "/home/filip/Desktop/informatika/mg-team-eurobot"
+file_name = os.path.join(os.path.dirname(os.path.abspath(__file__)),os.path.pardir)
 sys.path.append(os.path.abspath(file_name))
 from simulation.import_data import *
 
@@ -19,6 +21,8 @@ class StateSpace(dbus.service.Object):
     @dbus.service.method("com.mgrobotics.OdometryInterface", 
                          in_signature='', out_signature='ad')
     def get_state_space(self):
+        if ser==None:
+            return StateSpace.get_random_state_space()
         ser.write(bytearray('S', 'ascii'))
         while True:
             if ser.inWaiting():
@@ -74,8 +78,11 @@ if __name__ == '__main__':
     name = dbus.service.BusName("com.mgrobotics.Service", session_bus)
 
     # Open Serial
-    # ser = init_serial()
-    # ser.open()
+    try:
+        ser = init_serial()
+        ser.open()
+    except:
+        print("Couldn't open serial point, continuing as testing")
 
     # Define a service object
     state_space = StateSpace(session_bus, '/StateSpace')

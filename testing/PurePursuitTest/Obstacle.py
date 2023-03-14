@@ -12,8 +12,8 @@ class Obstacle:
 
     
     def draw(self, map: pygame.Surface):
-        pygame.draw.rect(map,color=(100,100,100),rect=(self.x,self.y,self.width,self.height), width=0)
-        pygame.draw.rect(map,color=(0,0,0),rect=(self.x,self.y,self.width,self.height), width=4)
+        pygame.draw.rect(map,(100,100,100),(self.x,self.y,self.width,self.height), 0)
+        pygame.draw.rect(map,(0,0,0),(self.x,self.y,self.width,self.height), 4)
     
     def PtIsInside(self, pos: tuple[float,float]) -> bool :
         return self.x<pos[0]<self.x+self.width and self.y<pos[1]<self.y+self.height 
