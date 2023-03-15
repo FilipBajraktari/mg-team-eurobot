@@ -7,7 +7,7 @@ class RoboT:
     def __init__(self,startpos: tuple[float, float], robotImg, width):
         self.cm2p=1200/300
         #Initial state
-        self.width=width
+        self.width=width*self.cm2p
         self.x=startpos[0]
         self.y=startpos[1]
         self.theta = math.radians(90)
@@ -22,6 +22,7 @@ class RoboT:
         self.prevPosC = 0
         self.prevRot= math.radians(90)
         self.prevDiff=0;
+        self.prevTurnError=0
 
         #Graphics
         self.img = robotImg

@@ -89,7 +89,7 @@ def turnAngle(target,current):
     current = numpy.degrees(current)
     er = target - current
     
-    if -180 > er or er > 180:
+    if -181 > er or er > 181:
         er = er + sgn(er)*(-360) 
     return numpy.radians(er)
 
@@ -112,16 +112,18 @@ def PurePursuit(robot: RoboT,dt) -> tuple[float, float]:
     if(len(robot.waypoints)<=robot.lastWaypoint+1) and (robot.x-robot.waypoints[-1][0])**2+(robot.y-robot.waypoints[-1][1])**2<=402:
         karot=robot.waypoints[-1]
         
+    if(len(robot.waypoints)<=robot.lastWaypoint+1) and (robot.x-robot.waypoints[-1][0])**2+(robot.y-robot.waypoints[-1][1])**2>5:
+        karot=None
         
     
     if(karot==None): 
         
         return (0,0)
     
-    velocityKp = 4
-    omegaKp = 5
-    omegaKd = 0
-    omegaTau = 0.1
+    velocityKp = 5
+    omegaKp = 10
+    omegaKd = 1
+    omegaTau = 0.5
     
     linearError = numpy.sqrt((karot[0]-robot.x)**2+(karot[1]-robot.y)**2)
     targetAngle = numpy.arctan2(karot[0]-robot.x, karot[1]-robot.y) * 180 / numpy.pi
@@ -131,9 +133,15 @@ def PurePursuit(robot: RoboT,dt) -> tuple[float, float]:
     v = max(0,numpy.cos(turnError))*linearError/2
     v *= velocityKp
     w = omegaKp * turnError # - cause of pygame
-    robot.prevDiff= omegaKd*2*(robot.theta-robot.prevRot) + (omegaTau-dt)/(omegaTau+dt)*robot.prevDiff
-    
+
+    robot.prevDiff= omegaKd*(turnError-robot.prevTurnError)/dt #+ (omegaTau-dt)/(omegaTau+dt)*robot.prevDiff:
+    w+=robot.prevDiff
+
     robot.target = karot
+    
+    w = numpy.clip(w, -numpy.pi/2,numpy.pi/2)
+
+    robot.prevTurnError = turnError
     
     return((2*v - w*robot.width)/2, (2*v + w*robot.width)/2)
 
@@ -167,7 +175,7 @@ def WriteToFB():
 
 ## Robots ##
 
-friendBOT = RoboT((WINDOW_SIZE[0]/2,WINDOW_SIZE[1]/2), BotPic1 , 21)
+friendBOT = RoboT((WINDOW_SIZE[0]/2,WINDOW_SIZE[1]/2), BotPic1 , 23.74)
 BotList = list([friendBOT])
 FieldObjects = list([friendBOT])    
 
