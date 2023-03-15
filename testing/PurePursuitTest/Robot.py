@@ -7,7 +7,7 @@ class RoboT:
     def __init__(self,startpos: tuple[float, float], robotImg, width):
         self.cm2p=1200/300
         #Initial state
-        self.width=width
+        self.width=width*self.cm2p
         self.x=startpos[0]
         self.y=startpos[1]
         self.theta = math.radians(90)
@@ -15,11 +15,14 @@ class RoboT:
         self.vr = 10*self.cm2p
         self.omega = 0
         self.maxspeed = 2*self.cm2p
-        self.waypoints = [(self.x,self.y)]
+        self.waypoints = []
         self.lastWaypoint = 0
         self.target = None
         self.prevPos = []
         self.prevPosC = 0
+        self.prevRot= math.radians(90)
+        self.prevDiff=0;
+        self.prevTurnError=0
 
         #Graphics
         self.img = robotImg
@@ -43,6 +46,8 @@ class RoboT:
             pygame.draw.circle(map, (0,255,0) ,self.target, 2)
 
     def move(self,dt : float):
+        self.prevRot = self.theta
+
         self.y+=((self.vl+self.vr)/2)*math.cos(self.theta)*dt
         self.x+=((self.vl+self.vr)/2)*math.sin(self.theta)*dt
         self.theta+=(self.vr-self.vl)/self.width*dt
@@ -54,10 +59,11 @@ class RoboT:
         self.rect = self.roatated.get_rect(center = (self.x,self.y))
     
     def dmove(self, x: float, y: float, theta: float):
+        self.prevRot = self.theta
+
         self.x=x
         self.y=y
         self.theta=theta
-        
         if(self.theta>math.pi): self.theta += -2*math.pi
         elif(self.theta<-math.pi): self.theta+= 2*math.pi
         

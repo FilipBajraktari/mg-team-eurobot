@@ -9,7 +9,9 @@ import dbus
 import dbus.service
 import dbus.mainloop.glib
 
-file_name = "/home/pi/Desktop/mg-team-eurobot"
+#Added to work anywhere
+#file_name = "/home/filip/Desktop/informatika/mg-team-eurobot"
+file_name = os.path.join(os.path.dirname(os.path.abspath(__file__)),os.path.pardir)
 sys.path.append(os.path.abspath(file_name))
 from simulation.import_data import *
 

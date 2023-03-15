@@ -10,3 +10,4 @@
 
 /testing/example-service.py
 /testing/example-client.py
+testing/PurePursuitTest/**/*.pyc

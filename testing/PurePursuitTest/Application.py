@@ -13,6 +13,7 @@ Implementation : 1. * Add map, make some sort of graphics for each of the elemen
                  4. Figure out a path planning algorithm
                  5. Add some kind of check for Collision
 """
+
 ## Variables ##
 WINDOW_SIZE = (1200,800)
 LOCALTESTING = True
@@ -22,35 +23,39 @@ NO_ODOMETRY = True
 import tarfile
 from tracemalloc import start
 from xml.dom.expatbuilder import theDOMImplementation
-import numpy, sys, pygame, math, cairo, cmath
+import numpy, sys, pygame, math, cmath
 from pygame import *
-from PIL import Image
 from typing import List
 from Robot import RoboT
 from Obstacle import Obstacle
 import time
 import threading
+import sys,os
 
 if not LOCALTESTING:
     import odrive
     my_drive = odrive.find_any()
+if not NO_ODOMETRY:
+    from gi.repository import GLib
 
-from gi.repository import GLib
-
-import dbus
-import dbus.service
-import dbus.mainloop.glib
+    import dbus
+    import dbus.service
+    import dbus.mainloop.glib
 
 ## INIT ##
+file_name = os.path.dirname(os.path.abspath(__file__))
+
+
+
 pygame.init()
 __clock__ = pygame.time.Clock()
 __fb__ = pygame.display.set_mode(WINDOW_SIZE,0,32)
-__bg__ = pygame.image.load('table.png')
+__bg__ = pygame.image.load(os.path.join(file_name,'table.png'))
 __bg__ = pygame.transform.rotate(__bg__, 90).copy()
 __bg__ = pygame.transform.scale(__bg__, (1200,800))
-BotPic1 = pygame.transform.scale(pygame.image.load(r'OurRobot.png'), (2*4*19.1,2*4*10))
+BotPic1 = pygame.transform.scale(pygame.image.load(os.path.join(file_name,r'OurRobot.png')), (2*4*19.1,2*4*10))
 BotPic1 = pygame.transform.rotate(BotPic1, 180)
-BotPic2 = pygame.transform.scale(pygame.image.load(r'EvilRobot.png'), (2*4*19.1,2*4*19.1))
+BotPic2 = pygame.transform.scale(pygame.image.load(os.path.join(file_name,r'EvilRobot.png')), (2*4*19.1,2*4*19.1))
 BotPic2 = pygame.transform.rotate(BotPic2, 180)
 
 PAUSED = 1
@@ -84,13 +89,14 @@ def turnAngle(target,current):
     current = numpy.degrees(current)
     er = target - current
     
-    if -180 > er or er > 180:
+    if -181 > er or er > 181:
         er = er + sgn(er)*(-360) 
     return numpy.radians(er)
 
-def PurePursuit(robot: RoboT) -> tuple[float, float]:
+def PurePursuit(robot: RoboT,dt) -> tuple[float, float]:
     karot = None
-
+    if(len(robot.waypoints)==0):
+        return 0,0
     for i in range(robot.lastWaypoint+1, len(robot.waypoints)):
         p = Intersect((robot.x,robot.y), robot.waypoints[robot.lastWaypoint], robot.waypoints[i],20)
         if(p==-1):
@@ -103,8 +109,21 @@ def PurePursuit(robot: RoboT) -> tuple[float, float]:
           ##  karot = robot.waypoints[i]
            ## break
         robot.lastWaypoint+=1
+    if(len(robot.waypoints)<=robot.lastWaypoint+1) and (robot.x-robot.waypoints[-1][0])**2+(robot.y-robot.waypoints[-1][1])**2<=402:
+        karot=robot.waypoints[-1]
+        
+    if(len(robot.waypoints)<=robot.lastWaypoint+1) and (robot.x-robot.waypoints[-1][0])**2+(robot.y-robot.waypoints[-1][1])**2>5:
+        karot=None
+        
     
-    if(karot==None): return (0,0)
+    if(karot==None): 
+        
+        return (0,0)
+    
+    velocityKp = 5
+    omegaKp = 10
+    omegaKd = 1
+    omegaTau = 0.5
     
     linearError = numpy.sqrt((karot[0]-robot.x)**2+(karot[1]-robot.y)**2)
     targetAngle = numpy.arctan2(karot[0]-robot.x, karot[1]-robot.y) * 180 / numpy.pi
@@ -112,10 +131,17 @@ def PurePursuit(robot: RoboT) -> tuple[float, float]:
     turnError = turnAngle(targetAngle,robot.theta)
     
     v = max(0,numpy.cos(turnError))*linearError/2
-    v *= 4
-    w = 5 * turnError # - cause of pygame
-    
+    v *= velocityKp
+    w = omegaKp * turnError # - cause of pygame
+
+    robot.prevDiff= omegaKd*(turnError-robot.prevTurnError)/dt #+ (omegaTau-dt)/(omegaTau+dt)*robot.prevDiff:
+    w+=robot.prevDiff
+
     robot.target = karot
+    
+    w = numpy.clip(w, -numpy.pi/2,numpy.pi/2)
+
+    robot.prevTurnError = turnError
     
     return((2*v - w*robot.width)/2, (2*v + w*robot.width)/2)
 
@@ -149,7 +175,7 @@ def WriteToFB():
 
 ## Robots ##
 
-friendBOT = RoboT((WINDOW_SIZE[0]/2,WINDOW_SIZE[1]/2), BotPic1 , 21)
+friendBOT = RoboT((WINDOW_SIZE[0]/2,WINDOW_SIZE[1]/2), BotPic1 , 23.74)
 BotList = list([friendBOT])
 FieldObjects = list([friendBOT])    
 
@@ -194,7 +220,18 @@ def pure_pursuit(iface):
                         if x.PtIsInside(pos): 
                             selRobot = x
                             addingWaypoint = False
-                    if addingWaypoint and selRobot != None: selRobot.waypoints.append(pos)
+                    if addingWaypoint and selRobot != None:
+                        if event.button == 1:
+                            if len(selRobot.waypoints) == 0:
+                                selRobot.waypoints.append((selRobot.x,selRobot.y))
+                            selRobot.waypoints.append(pos)
+                        else:
+                            if len(selRobot.waypoints)>0:
+                                selRobot.waypoints.pop()
+                                if len(selRobot.waypoints)-2<selRobot.lastWaypoint:
+                                    selRobot.waypoints.clear()
+                                    selRobot.lastWaypoint=0
+                                    
                 if  clickMode == OBSTACLE:
                     spos = tuple(pos)
                 if clickMode == ROBOT:
@@ -231,10 +268,10 @@ def pure_pursuit(iface):
             for x in BotList:
                 if x==friendBOT: 
                     continue
-                vl, vr = PurePursuit(x)
+                vl, vr = PurePursuit(x,dt)
                 x.SetState(vl,vr)
                 x.move(dt)
-            vl, vr = PurePursuit(friendBOT)
+            vl, vr = PurePursuit(friendBOT,dt)
             if NO_ODOMETRY:
                 friendBOT.SetState(vl,vr)
                 friendBOT.move(dt)
