@@ -16,8 +16,8 @@ Implementation : 1. * Add map, make some sort of graphics for each of the elemen
 
 ## Variables ##
 WINDOW_SIZE = (1200,800)
-LOCALTESTING = True
-NO_ODOMETRY = True
+LOCALTESTING = False
+NO_ODOMETRY = False
 
 ## Imports ##
 import tarfile
@@ -94,11 +94,12 @@ def turnAngle(target,current):
     return numpy.radians(er)
 
 def PurePursuit(robot: RoboT,dt) -> tuple[float, float]:
+    LOOKAHEAD=40
     karot = None
     if(len(robot.waypoints)==0):
         return 0,0
     for i in range(robot.lastWaypoint+1, len(robot.waypoints)):
-        p = Intersect((robot.x,robot.y), robot.waypoints[robot.lastWaypoint], robot.waypoints[i],20)
+        p = Intersect((robot.x,robot.y), robot.waypoints[robot.lastWaypoint], robot.waypoints[i],LOOKAHEAD)
         if(p==-1):
             karot = robot.waypoints[robot.lastWaypoint]
             break
@@ -109,10 +110,10 @@ def PurePursuit(robot: RoboT,dt) -> tuple[float, float]:
           ##  karot = robot.waypoints[i]
            ## break
         robot.lastWaypoint+=1
-    if(len(robot.waypoints)<=robot.lastWaypoint+1) and (robot.x-robot.waypoints[-1][0])**2+(robot.y-robot.waypoints[-1][1])**2<=402:
+    if(len(robot.waypoints)<=robot.lastWaypoint+1) and (robot.x-robot.waypoints[-1][0])**2+(robot.y-robot.waypoints[-1][1])**2<=LOOKAHEAD**2+2:
         karot=robot.waypoints[-1]
         
-    if(len(robot.waypoints)<=robot.lastWaypoint+1) and (robot.x-robot.waypoints[-1][0])**2+(robot.y-robot.waypoints[-1][1])**2>5:
+    if(len(robot.waypoints)<=robot.lastWaypoint+1) and (robot.x-robot.waypoints[-1][0])**2+(robot.y-robot.waypoints[-1][1])**2<20:
         karot=None
         
     
@@ -120,10 +121,10 @@ def PurePursuit(robot: RoboT,dt) -> tuple[float, float]:
         
         return (0,0)
     
-    velocityKp = 5
-    omegaKp = 10
-    omegaKd = 1
-    omegaTau = 0.5
+    velocityKp = 6/1.75
+    omegaKp = 5
+    omegaKd = 0.5
+    omegaTau = 0.1
     
     linearError = numpy.sqrt((karot[0]-robot.x)**2+(karot[1]-robot.y)**2)
     targetAngle = numpy.arctan2(karot[0]-robot.x, karot[1]-robot.y) * 180 / numpy.pi
@@ -134,12 +135,12 @@ def PurePursuit(robot: RoboT,dt) -> tuple[float, float]:
     v *= velocityKp
     w = omegaKp * turnError # - cause of pygame
 
-    robot.prevDiff= omegaKd*(turnError-robot.prevTurnError)/dt #+ (omegaTau-dt)/(omegaTau+dt)*robot.prevDiff:
+    robot.prevDiff= omegaKd*(turnError-robot.prevTurnError)/dt + (omegaTau-dt)/(omegaTau+dt)*robot.prevDiff
     w+=robot.prevDiff
 
     robot.target = karot
     
-    w = numpy.clip(w, -numpy.pi/2,numpy.pi/2)
+    w = numpy.clip(w, -numpy.pi/4,numpy.pi/4)
 
     robot.prevTurnError = turnError
     
@@ -279,9 +280,9 @@ def pure_pursuit(iface):
                 if LOCALTESTING:
                     ncords=iface.get_random_state_space()
                 else:
-                    ncords=iface.get_random_state_space()
-                    my_drive.axis0.controller.input_vel = vl/friendBOT.cm2p/5
-                    my_drive.axis1.controller.input_vel = vr/friendBOT.cm2p/5
+                    ncords=iface.get_state_space()
+                    my_drive.axis0.controller.input_vel = -vl/(friendBOT.cm2p*8*numpy.pi)*6
+                    my_drive.axis1.controller.input_vel = vr/(friendBOT.cm2p*8*numpy.pi)*6
                 friendBOT.dmove(ncords[0]*friendBOT.cm2p+WINDOW_SIZE[0]/2, 
                             ncords[1]*friendBOT.cm2p+WINDOW_SIZE[1]/2, 
                             -ncords[2]+numpy.pi/2)
