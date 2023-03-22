@@ -1,10 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def custom_canvas():
-    fig, ax = plt.subplots()
-    plt.ion()
-
+def setup_canvas(ax):
     ax.set_xlim(-150, 150)
     ax.set_ylim(-100, 100)
 
@@ -26,6 +23,14 @@ def custom_canvas():
     ax.grid(which='minor', alpha=0.2)
     ax.grid(which='major', alpha=0.5)
 
+    return ax
+
+def custom_canvas(interactive=True):
+    fig, ax = plt.subplots()
+    if interactive:
+        plt.ion()
+
+    ax = setup_canvas(ax)
     return fig, ax
 
 

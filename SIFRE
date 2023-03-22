@@ -1,0 +1,10 @@
+rpi ap MGRobotics:mgrobotics2022
+rpi vnc url pi.vnc.dev pi:raspberry
+
+Internet komande:
+1) sudo ifup wlan1
+2) iwconfig wlan1 (ovo je samo da se proveri na koji si net povezan)
+
+Gmail:
+mgrobotics22@gmail.com
+mgrobotics2022 - sifra
