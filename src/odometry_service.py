@@ -2,6 +2,7 @@ import os
 import sys
 import math
 import random
+import argparse
 
 from gi.repository import GLib
 
@@ -15,14 +16,18 @@ file_name = os.path.join(os.path.dirname(os.path.abspath(__file__)),os.path.pard
 sys.path.append(os.path.abspath(file_name))
 from simulation.import_data import *
 
+parser = argparse.ArgumentParser()
+parser.add_argument("-sc", "--serial_connect", default=True, action="store_false")
+args = parser.parse_args()
+serial_required = args.serial_connect
+
+
 class StateSpace(dbus.service.Object):
 
     # STATE SPACE
     @dbus.service.method("com.mgrobotics.OdometryInterface", 
                          in_signature='', out_signature='ad')
     def get_state_space(self):
-        if ser==None:
-            return StateSpace.get_random_state_space()
         ser.write(bytearray('S', 'ascii'))
         while True:
             if ser.inWaiting():
@@ -78,11 +83,10 @@ if __name__ == '__main__':
     name = dbus.service.BusName("com.mgrobotics.Service", session_bus)
 
     # Open Serial
-    try:
+    ser = None
+    if serial_required:
         ser = init_serial()
         ser.open()
-    except:
-        print("Couldn't open serial point, continuing as testing")
 
     # Define a service object
     state_space = StateSpace(session_bus, '/StateSpace')

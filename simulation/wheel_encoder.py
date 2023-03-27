@@ -14,14 +14,14 @@ from import_data import *
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-st", "--Sample_time", type=float)
-parser.add_argument("-tf", "--Testing_file", type=str)
+parser.add_argument("-st", "--sample_time", type=float)
+parser.add_argument("-tf", "--testing_file", type=str)
 args = parser.parse_args()
 
 default_sample_time = 0.001
-sample_time = args.Sample_time if args.Sample_time else default_sample_time
-TESTING_FILE = True if args.Testing_file != None and \
-                       args.Testing_file.lower() == "true" else False
+sample_time = args.sample_time if args.sample_time else default_sample_time
+TESTING_FILE = True if args.testing_file != None and \
+                       args.testing_file.lower() == "true" else False
 
 
 # Function that convert encoder counts to radians

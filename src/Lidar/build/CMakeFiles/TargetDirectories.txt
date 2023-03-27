@@ -1,3 +1,0 @@
-/home/filip/Desktop/informatika/mg-team-eurobot/src/Lidar/build/CMakeFiles/lidar.dir
-/home/filip/Desktop/informatika/mg-team-eurobot/src/Lidar/build/CMakeFiles/edit_cache.dir
-/home/filip/Desktop/informatika/mg-team-eurobot/src/Lidar/build/CMakeFiles/rebuild_cache.dir

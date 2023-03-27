@@ -1,1 +1,0 @@
-/usr/bin/c++ -rdynamic CMakeFiles/lidar.dir/lidar.cpp.o -o lidar  /home/filip/Desktop/informatika/mg-team-eurobot/src/Lidar/rplidar_driver.lib 
