@@ -177,8 +177,8 @@ def WriteToFB():
             continue
         y = Map[x[2]]
         pygame.draw.line(__fb__,(0,100,200),
-        (x[0]*friendBOT.cm2p/10,x[1]*friendBOT.cm2p/10),
-        (y[0]*friendBOT.cm2p/10,y[1]*friendBOT.cm2p/10),
+        ((x[0]+200)/10*friendBOT.cm2p,(x[1]+200)/10*friendBOT.cm2p),
+        ((y[0]+200)/10*friendBOT.cm2p,(y[1]+200)/10*friendBOT.cm2p),
         width=2)
     for x in FieldObjects: x.draw(__fb__) 
     return
@@ -309,16 +309,16 @@ def pure_pursuit(iface):
         __clock__.tick(60)
 
 def rrtSend():
-    Obstacles = [(x.x * 10/friendBOT.cm2p,x.y * 10/friendBOT.cm2p,x.radius * 10/friendBOT.cm2p) for x in FieldObjects if x!=friendBOT]
+    Obstacles = [(x.x * 10/friendBOT.cm2p-200,x.y * 10/friendBOT.cm2p,x.radius * 10/friendBOT.cm2p-200) for x in FieldObjects if x!=friendBOT]
     if friendBOT == None: 
-        return(WINDOW_SIZE[0]*5/friendBOT.cm2p,WINDOW_SIZE[1]*5/friendBOT.cm2p, fBgoal[0]/friendBOT.cm2p*10,fBgoal[1]/friendBOT.cm2p*10,[],0)
-    return(friendBOT.x*10/friendBOT.cm2p,friendBOT.y*10/friendBOT.cm2p, fBgoal[0]/friendBOT.cm2p*10,fBgoal[1]/friendBOT.cm2p*10,Obstacles,len(Obstacles))
+        return(WINDOW_SIZE[0]*5/friendBOT.cm2p-200,WINDOW_SIZE[1]*5/friendBOT.cm2p, fBgoal[0]/friendBOT.cm2p*10,fBgoal[1]/friendBOT.cm2p*10,[],0)
+    return(friendBOT.x*10/friendBOT.cm2p-200,friendBOT.y*10/friendBOT.cm2p-200, fBgoal[0]/friendBOT.cm2p*10-200,fBgoal[1]/friendBOT.cm2p*10-200,Obstacles,len(Obstacles))
 
 def rrtRecv(path,Tree):
     global friendBOT,Map
     if friendBOT==None:
         return
-    friendBOT.waypoints = [(x[0]/10*friendBOT.cm2p,x[1]/10*friendBOT.cm2p) for x in path]
+    friendBOT.waypoints = [((x[0]+200)/10*friendBOT.cm2p,(x[1]+200)/10*friendBOT.cm2p) for x in path]
     Map = Tree
     friendBOT.lastWaypoint=0
 

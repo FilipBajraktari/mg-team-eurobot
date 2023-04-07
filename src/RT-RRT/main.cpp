@@ -35,8 +35,8 @@ using namespace std;
  * IMPORTANT: Rs = sqrt(Povrs*MaxNodesInArea/(pi*maxNodesc))
  * 
  */
-#define AREAX 3000
-#define AREAY 2000
+#define AREAX (3000-400)
+#define AREAY (2000-400)
 #define CLOSEDIST 60
 #define GRID_X 15
 #define GRID_Y 15
