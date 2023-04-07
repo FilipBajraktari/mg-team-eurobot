@@ -9,6 +9,7 @@ class Obstacle:
         self.y = startpos[1]
         self.height = height
         self.width=width
+        self.radius = math.sqrt(height**2 + width**2)/2
 
     
     def draw(self, map: pygame.Surface):

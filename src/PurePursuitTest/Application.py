@@ -16,8 +16,8 @@ Implementation : 1. * Add map, make some sort of graphics for each of the elemen
 
 ## Variables ##
 WINDOW_SIZE = (1200,800)
-LOCALTESTING = False
-NO_ODOMETRY = False
+LOCALTESTING = True
+NO_ODOMETRY = True
 
 ## Imports ##
 import tarfile
@@ -31,6 +31,7 @@ from Obstacle import Obstacle
 import time
 import threading
 import sys,os
+import _rtrrt as rt
 
 if not LOCALTESTING:
     import odrive
@@ -57,7 +58,6 @@ BotPic1 = pygame.transform.scale(pygame.image.load(os.path.join(file_name,r'OurR
 BotPic1 = pygame.transform.rotate(BotPic1, 180)
 BotPic2 = pygame.transform.scale(pygame.image.load(os.path.join(file_name,r'EvilRobot.png')), (2*4*19.1,2*4*19.1))
 BotPic2 = pygame.transform.rotate(BotPic2, 180)
-
 PAUSED = 1
 RUNNING = 2
 SELECT = 3
@@ -170,15 +170,25 @@ def Intersect(pos: tuple[float,float], pt1: tuple[float,float], pt2: tuple[float
 
 ## RenderFunction ##
 def WriteToFB():
+    global Map
     __fb__.blit(__bg__,(0,0))
+    for x in Map:
+        if x[2]<0:
+            continue
+        y = Map[x[2]]
+        pygame.draw.line(__fb__,(0,100,200),
+        (x[0]*friendBOT.cm2p/10,x[1]*friendBOT.cm2p/10),
+        (y[0]*friendBOT.cm2p/10,y[1]*friendBOT.cm2p/10),
+        width=2)
     for x in FieldObjects: x.draw(__fb__) 
     return
-
 ## Robots ##
 
 friendBOT = RoboT((WINDOW_SIZE[0]/2,WINDOW_SIZE[1]/2), BotPic1 , 23.74)
+fBgoal = (50,50)
 BotList = list([friendBOT])
-FieldObjects = list([friendBOT])    
+FieldObjects = list([friendBOT])
+Map = []
 
 
 # LOOKAHEAD POSITION COORDINATES
@@ -187,13 +197,15 @@ y_lookahead = None
 theta_lookahead = None
 
 def catchall_new_lookahead(lookahead_postion):
-    global x_lookahead, y_lookahead, theta_lookahead
-    x_lookahead, y_lookahead, theta_lookahead = lookahead_postion
+    global friendBOT,Map
+    if friendBOT==None:
+        return
+    friendBOT.waypoints = [(x[0]/10*friendBOT.cm2p,x[1]/10*friendBOT.cm2p) for x in lookahead_postion]
 
 def pure_pursuit(iface):
-    time.sleep(0.5) # Time to setup Glib mainloop
+    time.sleep(1) # Time to setup Glib mainloop
     
-    global friendBOT,BotList,FieldObjects
+    global friendBOT,BotList,FieldObjects,fBgoal
     PAUSED = 1
     RUNNING = 2
     SELECT = 3
@@ -223,9 +235,12 @@ def pure_pursuit(iface):
                             addingWaypoint = False
                     if addingWaypoint and selRobot != None:
                         if event.button == 1:
-                            if len(selRobot.waypoints) == 0:
-                                selRobot.waypoints.append((selRobot.x,selRobot.y))
-                            selRobot.waypoints.append(pos)
+                            if(selRobot==friendBOT):
+                                fBgoal=pos
+                            else:
+                                if len(selRobot.waypoints) == 0:
+                                    selRobot.waypoints.append((selRobot.x,selRobot.y))
+                                selRobot.waypoints.append(pos)
                         else:
                             if len(selRobot.waypoints)>0:
                                 selRobot.waypoints.pop()
@@ -293,7 +308,29 @@ def pure_pursuit(iface):
         pygame.display.update()
         __clock__.tick(60)
 
+def rrtSend():
+    Obstacles = [(x.x * 10/friendBOT.cm2p,x.y * 10/friendBOT.cm2p,x.radius * 10/friendBOT.cm2p) for x in FieldObjects if x!=friendBOT]
+    if friendBOT == None: 
+        return(WINDOW_SIZE[0]*5/friendBOT.cm2p,WINDOW_SIZE[1]*5/friendBOT.cm2p, fBgoal[0]/friendBOT.cm2p*10,fBgoal[1]/friendBOT.cm2p*10,[],0)
+    return(friendBOT.x*10/friendBOT.cm2p,friendBOT.y*10/friendBOT.cm2p, fBgoal[0]/friendBOT.cm2p*10,fBgoal[1]/friendBOT.cm2p*10,Obstacles,len(Obstacles))
+
+def rrtRecv(path,Tree):
+    global friendBOT,Map
+    if friendBOT==None:
+        return
+    friendBOT.waypoints = [(x[0]/10*friendBOT.cm2p,x[1]/10*friendBOT.cm2p) for x in path]
+    Map = Tree
+    friendBOT.lastWaypoint=0
+
+def RtRRT():
+    time.sleep(2)
+    print("started rrt")
+    rt.startRRT(rrtSend, rrtRecv)
+
 def main():
+    tr = threading.Thread(target=RtRRT)
+    tr.daemon = True
+    tr.start()
     if NO_ODOMETRY:
         pure_pursuit(None)
         exit()

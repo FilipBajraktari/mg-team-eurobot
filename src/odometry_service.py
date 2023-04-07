@@ -62,7 +62,7 @@ class StateSpace(dbus.service.Object):
         pass
 
     @dbus.service.method('com.mgrobotics.PurePursuit',
-                         in_signature='ad', out_signature='s')
+                         in_signature='a(ddd)', out_signature='')
     def emit_new_lookahead(self, lookahead):
         self.new_lookahead(lookahead)
         return 'Pure Pursuit signal emitted'

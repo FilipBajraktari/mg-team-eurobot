@@ -21,8 +21,9 @@ class RoboT:
         self.prevPos = []
         self.prevPosC = 0
         self.prevRot= math.radians(90)
-        self.prevDiff=0;
+        self.prevDiff=0
         self.prevTurnError=0
+        self.radius = robotImg.get_width()/2
 
         #Graphics
         self.img = robotImg
@@ -41,6 +42,7 @@ class RoboT:
 
         map.blit(self.roatated, self.rect)
         
+
         if self.target != None : 
             self.target = int(self.target[0]),int(self.target[1])
             pygame.draw.circle(map, (0,255,0) ,self.target, 2)

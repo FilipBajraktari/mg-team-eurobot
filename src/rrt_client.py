@@ -9,43 +9,44 @@ import dbus.mainloop.glib
 
 import matplotlib.pyplot as plt
 from canvas_testing import custom_canvas
-
+import _rtrrt as rt
 import random
-from datetime import datetime
 
 # DESIRED POSITION COORDINATES
 x_desired = None
 y_desired = None
 theta_desired = None
+iface_pp = None
+iface = None
+xOffset = 1500
+yOffset = 1000
 
 def catchall_new_desired_position(desired_position):
-    global x_desired, y_desired, theta_desired
-    x_desired, y_desired, theta_desired = desired_position
+    global x_desired, y_desired
+    x_desired, y_desired = desired_position
+def rrtSend():
+    Obstacles = []
+    while iface == None: 
+        time.sleep(0.1)
+    ncords=iface.get_state_space()
+    ncords[0]*=10
+    ncords[0]+= xOffset
+    ncords[1]*=10
+    ncords[1]+= yOffset
+    return (ncords[0],ncords[1], x_desired,y_desired,Obstacles,len(Obstacles))
+
+def rrtRecv(path,Tree):
+    global iface_pp
+    if iface_pp == None:
+        return
+    iface_pp.emit_new_lookahead([(x[0]/10*4,x[1]/10*4) for x in path])
+    #Map = Tree
+    #friendBOT.lastWaypoint=0
 
 def rrt_star(iface, iface_pp):
-    time.sleep(0.5) # Time to setup Glib mainloop
-
-    fig, ax = custom_canvas()
-    while True:
-        current_state_space = iface.get_random_state_space()
-        # current_state_space = iface.get_state_space()
-        x_coordinate = current_state_space[0]
-        y_coordinate = current_state_space[1]
-        theta        = current_state_space[2]
-        # print(*current_state_space, end='\t')
-        print(x_desired, y_desired, theta_desired, end='\t')
-
-        now = datetime.now()
-        current_time = now.strftime("%H:%M:%S")
-        print(current_time)
-
-        # Send a lookup position
-        iface_pp.emit_new_lookahead([x_coordinate, y_coordinate, theta])
-
-        ax.scatter(x_coordinate, y_coordinate, s=3, c='blue')
-        plt.draw()
-        # plt.pause(random.uniform(0, 5))
-        plt.pause(0.5)
+    time.sleep(2)
+    print("started rrt")
+    rt.startRRT(rrtSend, rrtRecv)
 
 def main():
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
