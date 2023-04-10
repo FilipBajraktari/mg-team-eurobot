@@ -171,6 +171,7 @@ static uniform_real_distribution<float> distribution(0,100);
 
 static PyObject *InfoMeth;
 static PyObject *PpMeth;
+static PyObject *ErrMeth;
 
 static int
 addNode(cPoint xRand, int xClose, li &near)
@@ -559,7 +560,7 @@ planPath()
     {
         GoalPath[GoalPathLength++]=Root;
     }
-    if(dist2(Nodes[GoalPathPrime[GoalPathPrimeLength-1]],Goal) <= dist2(Nodes[GoalPath[GoalPathLength-1]],Goal))
+    if((Blocked.count(Root) <= 0 && cost(GoalPath[0]) == INFINITY) || dist2(Nodes[GoalPathPrime[GoalPathPrimeLength-1]],Goal) <= dist2(Nodes[GoalPath[GoalPathLength-1]],Goal))
     {
         swap(GoalPath,GoalPathPrime);
         swap(GoalPathLength,GoalPathPrimeLength);
@@ -584,8 +585,7 @@ static void
 readStateFromDbus()
 {
     PyObject *res=PyObject_CallObject(InfoMeth,NULL);
-    //PyErr_Print();
-    PyObject *obst; //= PyList_New(0);
+    PyObject *obst;
     cPoint _Robot;
     cPoint _Goal;
     int _ObstaclesC;
@@ -624,7 +624,6 @@ readStateFromDbus()
     Goal=_Goal;
     ObstaclesC=_ObstaclesC;
     Blocked.clear();
-    //printf("Works3\n");
     for(int i=0;i<ObstaclesC;i++){
         PyObject *o;
         o = PyList_GetItem(obst,i);
@@ -649,24 +648,24 @@ realTimeRRT()
 {
     while(!EXIT)
     {
-        /* READ */
+        
         readStateFromDbus();
         TickStart=clock();
         
         while (((double)(clock()-TickStart))/CLOCKS_PER_SEC < MAXDTIME)
         {
-            /* EXPAND and REWIRE */
+            
             expandAndRewireTree();
         }
         
         planPath();
 
 
-        /* Insert route function here */
+        
         int k=1;
         while(GoalPathLength>k+1 && CLOSE>dist2(Robot,Nodes[GoalPath[k]]))
         {
-            /*First = Closest*/
+            
             Parent[Root]=GoalPath[k-1];
             Root = GoalPath[k-1];
 
@@ -826,6 +825,17 @@ testLine(cPoint x, cPoint y)
 static void
 updatePP()
 {
+    if(Blocked.count(Root))
+    {
+        char* s= "Root is blocked";
+        PyObject *str = PyUnicode_FromString(s);
+        PyObject *args = Py_BuildValue("(O)",str);
+        PyObject_CallObject(ErrMeth, args);
+        PyErr_Print();
+        Py_DECREF(str);
+        Py_DECREF(args);
+        PyErr_Print();
+    }
     PyObject *pl = PyList_New(0);
     for(int i=0; i< GoalPathLength;i++)
     {
@@ -868,7 +878,7 @@ main()
 static PyObject *
 _startRRT(PyObject* self, PyObject* args)
 {
-    if(!PyArg_ParseTuple(args, "OO", &InfoMeth, &PpMeth))
+    if(!PyArg_ParseTuple(args, "OOO", &InfoMeth, &PpMeth, &ErrMeth))
     {
         return NULL;
     }   

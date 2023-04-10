@@ -131,7 +131,7 @@ def PurePursuit(robot: RoboT,dt) -> tuple[float, float]:
 
     turnError = turnAngle(targetAngle,robot.theta)
     
-    v = max(0,numpy.cos(turnError))*linearError/2
+    v = max(0,numpy.cos(numpy.clip(turnError*1.2, -numpy.pi,numpy.pi)))*linearError/2
     v *= velocityKp
     w = omegaKp * turnError # - cause of pygame
 
@@ -309,7 +309,7 @@ def pure_pursuit(iface):
         __clock__.tick(60)
 
 def rrtSend():
-    Obstacles = [(x.x * 10/friendBOT.cm2p-200,x.y * 10/friendBOT.cm2p,x.radius * 10/friendBOT.cm2p-200) for x in FieldObjects if x!=friendBOT]
+    Obstacles = [(x.x * 10/friendBOT.cm2p-200,x.y * 10/friendBOT.cm2p-200,x.radius * 10/friendBOT.cm2p) for x in FieldObjects if x!=friendBOT]
     if friendBOT == None: 
         return(WINDOW_SIZE[0]*5/friendBOT.cm2p-200,WINDOW_SIZE[1]*5/friendBOT.cm2p, fBgoal[0]/friendBOT.cm2p*10,fBgoal[1]/friendBOT.cm2p*10,[],0)
     return(friendBOT.x*10/friendBOT.cm2p-200,friendBOT.y*10/friendBOT.cm2p-200, fBgoal[0]/friendBOT.cm2p*10-200,fBgoal[1]/friendBOT.cm2p*10-200,Obstacles,len(Obstacles))
@@ -322,10 +322,13 @@ def rrtRecv(path,Tree):
     Map = Tree
     friendBOT.lastWaypoint=0
 
+def rrtError(e):
+    print(e)
+
 def RtRRT():
     time.sleep(2)
     print("started rrt")
-    rt.startRRT(rrtSend, rrtRecv)
+    rt.startRRT(rrtSend, rrtRecv, rrtError)
 
 def main():
     tr = threading.Thread(target=RtRRT)
