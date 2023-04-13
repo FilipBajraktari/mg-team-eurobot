@@ -35,8 +35,8 @@ using namespace std;
  * IMPORTANT: Rs = sqrt(Povrs*MaxNodesInArea/(pi*maxNodesc))
  * 
  */
-#define AREAX (3000-400)
-#define AREAY (2000-400)
+#define AREAX (3000-500)
+#define AREAY (2000-500)
 #define CLOSEDIST 60
 #define GRID_X 15
 #define GRID_Y 15
@@ -46,12 +46,13 @@ using namespace std;
 #define TICKTIME 1000
 #define CLOSE 10000
 #define GOALDELTA2 2500
-#define ROBOTRADIUS 215
+#define ROBOTRADIUS 250
 #define GOALPERCENT 0.1
 #define ELIPSEPERCENT 0.5
-#define MAXDTIME 0.01
+#define MAXDTIME 0.1
 
-struct cPoint{ /* Coordinates */
+struct cPoint /* Coordinates */
+{ 
     float x;
     float y;
     float radius;
@@ -650,11 +651,11 @@ realTimeRRT()
     {
         
         readStateFromDbus();
+        Py_BEGIN_ALLOW_THREADS
         TickStart=clock();
         
         while (((double)(clock()-TickStart))/CLOCKS_PER_SEC < MAXDTIME)
         {
-            
             expandAndRewireTree();
         }
         
@@ -674,6 +675,7 @@ realTimeRRT()
             Qs.clear();
             k++;
         }
+        Py_END_ALLOW_THREADS
         updatePP();
 
     }
@@ -881,9 +883,11 @@ _startRRT(PyObject* self, PyObject* args)
     if(!PyArg_ParseTuple(args, "OOO", &InfoMeth, &PpMeth, &ErrMeth))
     {
         return NULL;
-    }   
+    }
+    
     initVariables();
     realTimeRRT();
+    
     return NULL;
 }
 
