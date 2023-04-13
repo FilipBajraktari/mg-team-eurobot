@@ -34,14 +34,15 @@ class RoboT:
         for x,y in zip(self.waypoints[:-1:],self.waypoints[1::]):
             pygame.draw.line(map,(0,0,0),x,y,3)
         for x in self.waypoints: pygame.draw.circle(map,(255,0,0) ,x,2)
+        '''
         self.prevPos.append((self.x,self.y))
         if self.prevPosC>10000: self.prevPos.pop(0)
         else: self.prevPosC+=1
         for x,y in zip(self.prevPos[:-5:5],self.prevPos[5::5]):
             pygame.draw.line(map,(0,255,255),x,y,3)
-
+        '''
         map.blit(self.roatated, self.rect)
-        
+        #pygame.draw.circle(map, (255,255,0) ,(self.x,self.y), 22)
 
         if self.target != None : 
             self.target = int(self.target[0]),int(self.target[1])

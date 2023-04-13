@@ -16,10 +16,10 @@ Implementation : 1. * Add map, make some sort of graphics for each of the elemen
 
 ## Variables ##
 WINDOW_SIZE = (1200,800)
-LOCALTESTING = True
-NO_ODOMETRY = True
+LOCALTESTING = False
+NO_ODOMETRY = False
 
-## Imports ##
+## Imports ##   
 import tarfile
 from tracemalloc import start
 from xml.dom.expatbuilder import theDOMImplementation
@@ -33,9 +33,7 @@ import threading
 import sys,os
 import _rtrrt as rt
 
-if not LOCALTESTING:
-    import odrive
-    my_drive = odrive.find_any()
+
 if not NO_ODOMETRY:
     from gi.repository import GLib
 
@@ -177,14 +175,14 @@ def WriteToFB():
             continue
         y = Map[x[2]]
         pygame.draw.line(__fb__,(0,100,200),
-        ((x[0]+200)/10*friendBOT.cm2p,(x[1]+200)/10*friendBOT.cm2p),
-        ((y[0]+200)/10*friendBOT.cm2p,(y[1]+200)/10*friendBOT.cm2p),
+        ((x[0]+250)/10*friendBOT.cm2p,(x[1]+250)/10*friendBOT.cm2p),
+        ((y[0]+250)/10*friendBOT.cm2p,(y[1]+250)/10*friendBOT.cm2p),
         width=2)
     for x in FieldObjects: x.draw(__fb__) 
     return
 ## Robots ##
 
-friendBOT = RoboT((WINDOW_SIZE[0]/2,WINDOW_SIZE[1]/2), BotPic1 , 23.74)
+friendBOT = RoboT((WINDOW_SIZE[0]/2-96,WINDOW_SIZE[1]/2), BotPic1 , 23.74)
 fBgoal = (50,50)
 BotList = list([friendBOT])
 FieldObjects = list([friendBOT])
@@ -203,6 +201,9 @@ def catchall_new_lookahead(lookahead_postion):
     friendBOT.waypoints = [(x[0]/10*friendBOT.cm2p,x[1]/10*friendBOT.cm2p) for x in lookahead_postion]
 
 def pure_pursuit(iface):
+    if not LOCALTESTING:
+        import odrive
+        my_drive = odrive.find_any()
     time.sleep(1) # Time to setup Glib mainloop
     
     global friendBOT,BotList,FieldObjects,fBgoal
@@ -213,6 +214,7 @@ def pure_pursuit(iface):
     WAYPOINTS = 5
     ROBOT = 6
 
+    
 
     state = PAUSED
 
@@ -279,7 +281,7 @@ def pure_pursuit(iface):
         dt = pygame.time.get_ticks()-lasttime
         lasttime+=dt
         dt/=1000
-        
+        #print(1/(dt+0.0001))
         if state == RUNNING:
             for x in BotList:
                 if x==friendBOT: 
@@ -293,12 +295,14 @@ def pure_pursuit(iface):
                 friendBOT.move(dt)
             else:
                 if LOCALTESTING:
-                    ncords=iface.get_random_state_space()
-                else:
                     ncords=iface.get_state_space()
+                else:   
+                    ncords=iface.get_state_space()
+                    f1 = time.time()
                     my_drive.axis0.controller.input_vel = -vl/(friendBOT.cm2p*8*numpy.pi)*6
                     my_drive.axis1.controller.input_vel = vr/(friendBOT.cm2p*8*numpy.pi)*6
-                friendBOT.dmove(ncords[0]*friendBOT.cm2p+WINDOW_SIZE[0]/2, 
+                    #print(f1-time.time())
+                friendBOT.dmove(ncords[0]*friendBOT.cm2p+WINDOW_SIZE[0]/2-96, 
                             ncords[1]*friendBOT.cm2p+WINDOW_SIZE[1]/2, 
                             -ncords[2]+numpy.pi/2)
             
@@ -309,16 +313,16 @@ def pure_pursuit(iface):
         __clock__.tick(60)
 
 def rrtSend():
-    Obstacles = [(x.x * 10/friendBOT.cm2p-200,x.y * 10/friendBOT.cm2p-200,x.radius * 10/friendBOT.cm2p) for x in FieldObjects if x!=friendBOT]
+    Obstacles = [(x.x * 10/friendBOT.cm2p-250,x.y * 10/friendBOT.cm2p-250,x.radius * 10/friendBOT.cm2p) for x in FieldObjects if x!=friendBOT]
     if friendBOT == None: 
-        return(WINDOW_SIZE[0]*5/friendBOT.cm2p-200,WINDOW_SIZE[1]*5/friendBOT.cm2p, fBgoal[0]/friendBOT.cm2p*10,fBgoal[1]/friendBOT.cm2p*10,[],0)
-    return(friendBOT.x*10/friendBOT.cm2p-200,friendBOT.y*10/friendBOT.cm2p-200, fBgoal[0]/friendBOT.cm2p*10-200,fBgoal[1]/friendBOT.cm2p*10-200,Obstacles,len(Obstacles))
+        return(WINDOW_SIZE[0]*5/friendBOT.cm2p-250-240,WINDOW_SIZE[1]*5/friendBOT.cm2p-250, fBgoal[0]/friendBOT.cm2p*10,fBgoal[1]/friendBOT.cm2p*10,[],0)
+    return(friendBOT.x*10/friendBOT.cm2p-250,friendBOT.y*10/friendBOT.cm2p-250, fBgoal[0]/friendBOT.cm2p*10-250,fBgoal[1]/friendBOT.cm2p*10-250,Obstacles,len(Obstacles))
 
 def rrtRecv(path,Tree):
     global friendBOT,Map
     if friendBOT==None:
         return
-    friendBOT.waypoints = [((x[0]+200)/10*friendBOT.cm2p,(x[1]+200)/10*friendBOT.cm2p) for x in path]
+    friendBOT.waypoints = [((x[0]+250)/10*friendBOT.cm2p,(x[1]+250)/10*friendBOT.cm2p) for x in path]
     Map = Tree
     friendBOT.lastWaypoint=0
 
