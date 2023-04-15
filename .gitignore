@@ -1,4 +1,4 @@
-*/__pycache__
+**/__pycache__
 
 */build
 
@@ -11,3 +11,5 @@
 /testing/example-service.py
 /testing/example-client.py
 testing/PurePursuitTest/**/*.pyc
+**/build
+./**.egg-info
