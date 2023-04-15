@@ -37,16 +37,16 @@ using namespace std;
  */
 #define AREAX (3000-500)
 #define AREAY (2000-500)
-#define CLOSEDIST 60
+#define CLOSEDIST 110
 #define GRID_X 15
 #define GRID_Y 15
 #define MAXOBSTC 50
 #define MAXNODES 7000
 #define MAXNODESINAREA 7
 #define TICKTIME 1000
-#define CLOSE 10000
+#define CLOSE 30000
 #define GOALDELTA2 2500
-#define ROBOTRADIUS 250
+#define ROBOTRADIUS 200
 #define GOALPERCENT 0.1
 #define ELIPSEPERCENT 0.5
 #define MAXDTIME 0.1

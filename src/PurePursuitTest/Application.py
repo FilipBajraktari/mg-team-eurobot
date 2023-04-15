@@ -16,7 +16,7 @@ Implementation : 1. * Add map, make some sort of graphics for each of the elemen
 
 ## Variables ##
 WINDOW_SIZE = (1200,800)
-LOCALTESTING = False
+LOCALTESTING = True
 NO_ODOMETRY = False
 
 ## Imports ##   
@@ -92,7 +92,7 @@ def turnAngle(target,current):
     return numpy.radians(er)
 
 def PurePursuit(robot: RoboT,dt) -> tuple[float, float]:
-    LOOKAHEAD=40
+    LOOKAHEAD=60
     karot = None
     if(len(robot.waypoints)==0):
         return 0,0
@@ -119,9 +119,9 @@ def PurePursuit(robot: RoboT,dt) -> tuple[float, float]:
         
         return (0,0)
     
-    velocityKp = 6/1.75
-    omegaKp = 5
-    omegaKd = 0.5
+    velocityKp = 6/2
+    omegaKp = 4
+    omegaKd = 0.1
     omegaTau = 0.1
     
     linearError = numpy.sqrt((karot[0]-robot.x)**2+(karot[1]-robot.y)**2)
@@ -194,6 +194,8 @@ x_lookahead = None
 y_lookahead = None
 theta_lookahead = None
 
+state = 1
+
 def catchall_new_lookahead(lookahead_postion):
     global friendBOT,Map
     if friendBOT==None:
@@ -206,7 +208,71 @@ def pure_pursuit(iface):
         my_drive = odrive.find_any()
     time.sleep(1) # Time to setup Glib mainloop
     
-    global friendBOT,BotList,FieldObjects,fBgoal
+    global friendBOT,BotList,FieldObjects,fBgoal,state
+    PAUSED = 1
+    RUNNING = 2
+    SELECT = 3
+    OBSTACLE = 4
+    WAYPOINTS = 5
+    ROBOT = 6
+
+    
+
+    state = PAUSED
+    lasttime=0
+    clickMode = SELECT
+    dt = 0
+    selRobot = None
+    while True:
+         
+        dt = time.time()-lasttime
+        lasttime+=dt
+        if state == RUNNING:
+            for x in BotList:
+                if x==friendBOT: 
+                    continue
+                vl, vr = PurePursuit(x,dt)
+                x.SetState(vl,vr)
+                x.move(dt)
+            vl, vr = PurePursuit(friendBOT,dt)
+            if NO_ODOMETRY:
+                friendBOT.SetState(vl,vr)
+                friendBOT.move(dt)
+            else:
+                if LOCALTESTING:
+                    ncords=iface.get_state_space()
+                else:   
+                    ncords=iface.get_state_space()
+                    f1 = time.time()
+                    my_drive.axis0.controller.input_vel = -vl/(friendBOT.cm2p*8*numpy.pi)*6
+                    my_drive.axis1.controller.input_vel = vr/(friendBOT.cm2p*8*numpy.pi)*6
+                    #print(f1-time.time())
+                friendBOT.dmove(ncords[0]*friendBOT.cm2p+WINDOW_SIZE[0]/2-96, 
+                            ncords[1]*friendBOT.cm2p+WINDOW_SIZE[1]/2, 
+                            -ncords[2]+numpy.pi/2)
+            
+        print(1/dt)
+
+
+def rrtSend():
+    Obstacles = [(x.x * 10/friendBOT.cm2p-250,x.y * 10/friendBOT.cm2p-250,x.radius * 10/friendBOT.cm2p) for x in FieldObjects if x!=friendBOT]
+    if friendBOT == None: 
+        return(WINDOW_SIZE[0]*5/friendBOT.cm2p-250-240,WINDOW_SIZE[1]*5/friendBOT.cm2p-250, fBgoal[0]/friendBOT.cm2p*10,fBgoal[1]/friendBOT.cm2p*10,[],0)
+    return(friendBOT.x*10/friendBOT.cm2p-250,friendBOT.y*10/friendBOT.cm2p-250, fBgoal[0]/friendBOT.cm2p*10-250,fBgoal[1]/friendBOT.cm2p*10-250,Obstacles,len(Obstacles))
+
+def rrtRecv(path,Tree):
+    global friendBOT,Map
+    if friendBOT==None:
+        return
+    friendBOT.waypoints = [((x[0]+250)/10*friendBOT.cm2p,(x[1]+250)/10*friendBOT.cm2p) for x in path]
+    Map = Tree
+    friendBOT.lastWaypoint=0
+
+def rrtError(e):
+    print(e)
+
+def thePyGameThread():
+    global friendBOT,BotList,FieldObjects,fBgoal, state
     PAUSED = 1
     RUNNING = 2
     SELECT = 3
@@ -275,59 +341,9 @@ def pure_pursuit(iface):
                     clickMode = ROBOT
                 if event.key == K_s:
                     clickMode = SELECT
-                    
-                
-            
-        dt = pygame.time.get_ticks()-lasttime
-        lasttime+=dt
-        dt/=1000
-        #print(1/(dt+0.0001))
-        if state == RUNNING:
-            for x in BotList:
-                if x==friendBOT: 
-                    continue
-                vl, vr = PurePursuit(x,dt)
-                x.SetState(vl,vr)
-                x.move(dt)
-            vl, vr = PurePursuit(friendBOT,dt)
-            if NO_ODOMETRY:
-                friendBOT.SetState(vl,vr)
-                friendBOT.move(dt)
-            else:
-                if LOCALTESTING:
-                    ncords=iface.get_state_space()
-                else:   
-                    ncords=iface.get_state_space()
-                    f1 = time.time()
-                    my_drive.axis0.controller.input_vel = -vl/(friendBOT.cm2p*8*numpy.pi)*6
-                    my_drive.axis1.controller.input_vel = vr/(friendBOT.cm2p*8*numpy.pi)*6
-                    #print(f1-time.time())
-                friendBOT.dmove(ncords[0]*friendBOT.cm2p+WINDOW_SIZE[0]/2-96, 
-                            ncords[1]*friendBOT.cm2p+WINDOW_SIZE[1]/2, 
-                            -ncords[2]+numpy.pi/2)
-            
-
         WriteToFB()
-                
         pygame.display.update()
         __clock__.tick(60)
-
-def rrtSend():
-    Obstacles = [(x.x * 10/friendBOT.cm2p-250,x.y * 10/friendBOT.cm2p-250,x.radius * 10/friendBOT.cm2p) for x in FieldObjects if x!=friendBOT]
-    if friendBOT == None: 
-        return(WINDOW_SIZE[0]*5/friendBOT.cm2p-250-240,WINDOW_SIZE[1]*5/friendBOT.cm2p-250, fBgoal[0]/friendBOT.cm2p*10,fBgoal[1]/friendBOT.cm2p*10,[],0)
-    return(friendBOT.x*10/friendBOT.cm2p-250,friendBOT.y*10/friendBOT.cm2p-250, fBgoal[0]/friendBOT.cm2p*10-250,fBgoal[1]/friendBOT.cm2p*10-250,Obstacles,len(Obstacles))
-
-def rrtRecv(path,Tree):
-    global friendBOT,Map
-    if friendBOT==None:
-        return
-    friendBOT.waypoints = [((x[0]+250)/10*friendBOT.cm2p,(x[1]+250)/10*friendBOT.cm2p) for x in path]
-    Map = Tree
-    friendBOT.lastWaypoint=0
-
-def rrtError(e):
-    print(e)
 
 def RtRRT():
     time.sleep(2)
@@ -338,6 +354,9 @@ def main():
     tr = threading.Thread(target=RtRRT)
     tr.daemon = True
     tr.start()
+    trp = threading.Thread(target=thePyGameThread)
+    trp.daemon = True
+    trp.start()
     if NO_ODOMETRY:
         pure_pursuit(None)
         exit()
