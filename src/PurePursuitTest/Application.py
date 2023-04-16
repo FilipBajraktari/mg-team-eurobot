@@ -16,23 +16,31 @@ Implementation : 1. * Add map, make some sort of graphics for each of the elemen
 
 ## Variables ##
 WINDOW_SIZE = (1200,800)
+
 LOCALTESTING = True
-NO_ODOMETRY = False
+NO_ODOMETRY = True
 
 ## Imports ##   
 import tarfile
 from tracemalloc import start
 from xml.dom.expatbuilder import theDOMImplementation
 import numpy, sys, pygame, math, cmath
-from pygame import *
+from pygame.locals import *
 from typing import List
 from Robot import RoboT
 from Obstacle import Obstacle
+import Robot
+import Obstacle
 import time
 import threading
-import sys,os
+import sys,os, copy
+import glm as gm
 import _rtrrt as rt
+from glm import vec2
 
+Robot.x0 = Obstacle.x0 = 1200/2
+Robot.y0 = Obstacle.y0 = 800/2
+Robot.cm2p = Obstacle.cm2p = 4
 
 if not NO_ODOMETRY:
     from gi.repository import GLib
@@ -92,7 +100,7 @@ def turnAngle(target,current):
     return numpy.radians(er)
 
 def PurePursuit(robot: RoboT,dt) -> tuple[float, float]:
-    LOOKAHEAD=60
+    LOOKAHEAD=20
     karot = None
     if(len(robot.waypoints)==0):
         return 0,0
@@ -108,10 +116,10 @@ def PurePursuit(robot: RoboT,dt) -> tuple[float, float]:
           ##  karot = robot.waypoints[i]
            ## break
         robot.lastWaypoint+=1
-    if(len(robot.waypoints)<=robot.lastWaypoint+1) and (robot.x-robot.waypoints[-1][0])**2+(robot.y-robot.waypoints[-1][1])**2<=LOOKAHEAD**2+2:
+    if(len(robot.waypoints)<=robot.lastWaypoint+1) and gm.distance2(robot.waypoints[1],(robot.x,robot.y))<=LOOKAHEAD**2+5:
         karot=robot.waypoints[-1]
-        
-    if(len(robot.waypoints)<=robot.lastWaypoint+1) and (robot.x-robot.waypoints[-1][0])**2+(robot.y-robot.waypoints[-1][1])**2<20:
+
+    if(len(robot.waypoints)<=robot.lastWaypoint+1) and gm.distance2(robot.waypoints[-1],(robot.x,robot.y))<3:
         karot=None
         
     
@@ -123,25 +131,28 @@ def PurePursuit(robot: RoboT,dt) -> tuple[float, float]:
     omegaKp = 4
     omegaKd = 0.1
     omegaTau = 0.1
-    
-    linearError = numpy.sqrt((karot[0]-robot.x)**2+(karot[1]-robot.y)**2)
-    targetAngle = numpy.arctan2(karot[0]-robot.x, karot[1]-robot.y) * 180 / numpy.pi
+    karot = vec2(karot)
+    linearError = gm.distance(karot,vec2(robot.x,robot.y))
 
-    turnError = turnAngle(targetAngle,robot.theta)
+    localp = robot.toLocalSystem(karot)
+
+    turnError = gm.atan(localp.y,localp.x)
+
+
+    #w
+    #:turnError = turnAngle(targetAngle,robot.theta)
     
-    v = max(0,numpy.cos(numpy.clip(turnError*1.2, -numpy.pi,numpy.pi)))*linearError/2
+    v = max(0,gm.cos(gm.clamp(turnError*1.2, -numpy.pi,numpy.pi)))*linearError/2
     v *= velocityKp
-    w = omegaKp * turnError # - cause of pygame
+    w = omegaKp * turnError 
 
-    robot.prevDiff= omegaKd*(turnError-robot.prevTurnError)/dt + (omegaTau-dt)/(omegaTau+dt)*robot.prevDiff
+    robot.prevDiff= omegaKd*(turnError-robot.prevTurnError)/(dt+0.0001) + (omegaTau-dt)/(omegaTau+dt)*robot.prevDiff
     w+=robot.prevDiff
 
-    robot.target = karot
     
     w = numpy.clip(w, -numpy.pi/4,numpy.pi/4)
 
     robot.prevTurnError = turnError
-    
     return((2*v - w*robot.width)/2, (2*v + w*robot.width)/2)
 
 def Intersect(pos: tuple[float,float], pt1: tuple[float,float], pt2: tuple[float,float], lookAheadDis: float):
@@ -168,21 +179,25 @@ def Intersect(pos: tuple[float,float], pt1: tuple[float,float], pt2: tuple[float
 
 ## RenderFunction ##
 def WriteToFB():
-    global Map
+    global Map,friendBOT
+    base = vec2(Robot.x0,Robot.y0)
     __fb__.blit(__bg__,(0,0))
+    #xl = obstDistance(friendBOT,friendBOT,FieldObjects)
+    #pygame.draw.circle(__fb__,(40,200,10),base+vec2(Robot.cm2p,-Robot.cm2p)*(friendBOT.x,friendBOT.y),xl*Robot.cm2p)
     for x in Map:
         if x[2]<0:
             continue
         y = Map[x[2]]
         pygame.draw.line(__fb__,(0,100,200),
-        ((x[0]+250)/10*friendBOT.cm2p,(x[1]+250)/10*friendBOT.cm2p),
-        ((y[0]+250)/10*friendBOT.cm2p,(y[1]+250)/10*friendBOT.cm2p),
+        base+vec2(Robot.cm2p,-Robot.cm2p)*vec2((x[0]+250-1500)/10,(x[1]+250-1000)/10),
+        base+vec2(Robot.cm2p,-Robot.cm2p)*vec2((y[0]+250-1500)/10,(y[1]+250-1000)/10),
         width=2)
-    for x in FieldObjects: x.draw(__fb__) 
+    for x in FieldObjects: x.draw(__fb__)
+    
     return
 ## Robots ##
 
-friendBOT = RoboT((WINDOW_SIZE[0]/2-96,WINDOW_SIZE[1]/2), BotPic1 , 23.74)
+friendBOT = RoboT((0,0), BotPic1 , 23.74)
 fBgoal = (50,50)
 BotList = list([friendBOT])
 FieldObjects = list([friendBOT])
@@ -224,7 +239,11 @@ def pure_pursuit(iface):
     dt = 0
     selRobot = None
     while True:
-         
+        if state != RUNNING: 
+            if not LOCALTESTING:
+                my_drive.axis0.controller.input_vel = 0
+                my_drive.axis1.controller.input_vel = 0
+            friendBOT.vl,friendBOT.vr = (0,0)
         dt = time.time()-lasttime
         lasttime+=dt
         if state == RUNNING:
@@ -234,9 +253,17 @@ def pure_pursuit(iface):
                 vl, vr = PurePursuit(x,dt)
                 x.SetState(vl,vr)
                 x.move(dt)
-            vl, vr = PurePursuit(friendBOT,dt)
+                #state = PAUSED
+            #vl,vr = PurePursuit(friendBOT,dt)
+            goal = None
+            for wa in friendBOT.waypoints:
+                goal = wa
+                if gm.distance2(wa,(friendBOT.x,friendBOT.y))>800:
+                    break
+            if goal != None:
+                DWA(goal)
+            #friendBOT.SetState(vl,vr)
             if NO_ODOMETRY:
-                friendBOT.SetState(vl,vr)
                 friendBOT.move(dt)
             else:
                 if LOCALTESTING:
@@ -244,27 +271,27 @@ def pure_pursuit(iface):
                 else:   
                     ncords=iface.get_state_space()
                     f1 = time.time()
-                    my_drive.axis0.controller.input_vel = -vl/(friendBOT.cm2p*8*numpy.pi)*6
-                    my_drive.axis1.controller.input_vel = vr/(friendBOT.cm2p*8*numpy.pi)*6
+                    my_drive.axis0.controller.input_vel = -friendBOT.vl/(8*numpy.pi)*6
+                    my_drive.axis1.controller.input_vel = friendBOT.vr/(8*numpy.pi)*6
                     #print(f1-time.time())
-                friendBOT.dmove(ncords[0]*friendBOT.cm2p+WINDOW_SIZE[0]/2-96, 
-                            ncords[1]*friendBOT.cm2p+WINDOW_SIZE[1]/2, 
+                friendBOT.dmove(ncords[0]-24, 
+                            ncords[1], 
                             -ncords[2]+numpy.pi/2)
             
-        print(1/dt)
+        #print(1/dt)
 
 
 def rrtSend():
-    Obstacles = [(x.x * 10/friendBOT.cm2p-250,x.y * 10/friendBOT.cm2p-250,x.radius * 10/friendBOT.cm2p) for x in FieldObjects if x!=friendBOT]
+    Obstacles = [(x.x * 10-250+1500,x.y * 10-250+1000,x.radius * 10) for x in FieldObjects if x!=friendBOT]
     if friendBOT == None: 
-        return(WINDOW_SIZE[0]*5/friendBOT.cm2p-250-240,WINDOW_SIZE[1]*5/friendBOT.cm2p-250, fBgoal[0]/friendBOT.cm2p*10,fBgoal[1]/friendBOT.cm2p*10,[],0)
-    return(friendBOT.x*10/friendBOT.cm2p-250,friendBOT.y*10/friendBOT.cm2p-250, fBgoal[0]/friendBOT.cm2p*10-250,fBgoal[1]/friendBOT.cm2p*10-250,Obstacles,len(Obstacles))
+        return(1500-250-240,1000-250, fBgoal[0]*10+1500-250,fBgoal[1]*10+1000-250,[],0)
+    return(friendBOT.x*10-250+1500,friendBOT.y*10-250+1000, fBgoal[0]*10-250+1500,fBgoal[1]*10-250+1000,Obstacles,len(Obstacles))
 
 def rrtRecv(path,Tree):
     global friendBOT,Map
     if friendBOT==None:
         return
-    friendBOT.waypoints = [((x[0]+250)/10*friendBOT.cm2p,(x[1]+250)/10*friendBOT.cm2p) for x in path]
+    friendBOT.waypoints = [((x[0]+250-1500)/10,(x[1]+250-1000)/10) for x in path]
     Map = Tree
     friendBOT.lastWaypoint=0
 
@@ -295,6 +322,7 @@ def thePyGameThread():
                 exit()
             elif event.type == MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
+                pos = (vec2(pos[0],pos[1])-vec2(Robot.x0,Robot.y0))/vec2(Robot.cm2p,-Robot.cm2p)
                 if clickMode == SELECT:
                     addingWaypoint = True
                     for x in BotList:
@@ -317,23 +345,21 @@ def thePyGameThread():
                                     selRobot.lastWaypoint=0
                                     
                 if  clickMode == OBSTACLE:
-                    spos = tuple(pos)
+                    spos = pos
                 if clickMode == ROBOT:
                     nrobot = RoboT(pos, BotPic2, 21)
                     BotList.append(nrobot)
                     FieldObjects.append(nrobot)
             elif event.type == MOUSEBUTTONUP:
                 pos = pygame.mouse.get_pos()
+                pos = (vec2(pos[0],pos[1])-vec2(Robot.x0,Robot.y0))/vec2(Robot.cm2p,-Robot.cm2p)
                 if clickMode == OBSTACLE:
                     if spos != None:
-                        FieldObjects.append( Obstacle((min(pos[0],spos[0]), min(pos[1],spos[1])), abs(pos[0]-spos[0]), abs(pos[1]-spos[1])))
+                        FieldObjects.append( Obstacle.Obstacle((gm.min(pos,spos).x,gm.max(pos,spos).y), gm.abs(pos-spos).x, gm.abs(pos-spos).y))
             elif event.type == KEYDOWN:
                 if event.key == K_SPACE:
                     if(state == RUNNING) : 
                         state = PAUSED
-                        if not LOCALTESTING:
-                            my_drive.axis0.controller.input_vel = 0
-                            my_drive.axis1.controller.input_vel = 0
                     else : state = RUNNING
                 if event.key == K_f:
                     clickMode = OBSTACLE
@@ -344,6 +370,87 @@ def thePyGameThread():
         WriteToFB()
         pygame.display.update()
         __clock__.tick(60)
+
+def DWA(GoalPoint: gm.vec2):
+    global friendBOT, BotList, FieldObjects
+    MaxSpeed=50
+    MaxTheta=numpy.deg2rad(120)
+    MaxAcceleration=25
+    MaxTurnAcceleration=numpy.deg2rad(90)
+    GoalMultiplier=32
+    
+    ObstacleMultiplier=666
+    TargetVel = 12 * gm.length(gm.vec2(friendBOT.x,friendBOT.y)-GoalPoint)
+    VelocityMultiplier=100
+    TurningradiusMultiplier=1
+    SmoothnesMultiplier=1
+    OrientationMultiplier=1
+    SAFEDISTANCE=15
+    vL = friendBOT.vl
+    vR = friendBOT.vr
+    dt = 0.1
+    Steps = 10
+    a = 2*MaxAcceleration/5
+    vLposiblearray = [vL-MaxAcceleration*dt+a*dt*i for i in range(0,5)]
+    vLposiblearray.append(vL)
+    vRposiblearray = [vR-MaxAcceleration*dt+a*dt*i for i in range(0,5)]
+    vRposiblearray.append(vR)
+    BestCost = 1000000000
+    Best = None
+    
+    for vLposible in vLposiblearray:
+        for vRposible in vRposiblearray:
+            if(abs(vLposible)<=MaxSpeed and abs(vRposible)<=MaxSpeed ):
+                predictState = predictPos(vLposible,vRposible,dt*Steps,friendBOT)
+
+
+                x = friendBOT.x
+                y = friendBOT.y
+                A = gm.vec2(x,y)
+                B = gm.vec2(predictState.x,predictState.y)
+                DistImprovement = gm.distance(B,GoalPoint) - gm.distance(A,GoalPoint)
+                obstacleDist = obstDistance(predictState,friendBOT,FieldObjects)
+
+                DistCost = GoalMultiplier * DistImprovement
+                if(obstacleDist < SAFEDISTANCE):
+                    obstacleCost = ObstacleMultiplier*(SAFEDISTANCE-obstacleDist)
+                else:
+                    obstacleCost = 0.0
+                VelCost = VelocityMultiplier*abs((vL+vR)/2 - TargetVel) 
+                Cost = obstacleCost + DistCost + VelCost
+                #print(f'Cost: {Cost}, vL:{vLposible}, vR:{vRposible}')
+                if(BestCost > Cost):
+                    BestCost = Cost
+                    Best = vLposible,vRposible
+                    friendBOT.target = (B.x,B.y)
+
+    friendBOT.vl, friendBOT.vr = Best
+    #print("ASdAAD")
+
+
+                
+
+def predictPos(vL, vR, delta,friendBOT):
+    p = copy.copy(friendBOT)
+    p.vl=vL
+    p.vr=vR
+    p.move(delta)
+    return p
+
+def obstDistance(prediction : RoboT,fiendBOT: RoboT,FielldObjects):
+    global friendBOT,FieldObjects
+    mindist = 100000
+    for FO in FieldObjects:
+        if (FO.x,FO.y) != (friendBOT.x,friendBOT.y):
+            x = prediction.toLocalSystem((FO.x,FO.y))
+            x.x += 6-23.5/2
+            b = gm.vec2(23.5/2,35/2)
+            p = x
+            d = abs(p)-b
+            mindist = min(mindist,  (gm.length(gm.max(d,0)) + min(max(d.x,d.y),0.0))-FO.radius)
+    return mindist
+
+    
 
 def RtRRT():
     time.sleep(2)

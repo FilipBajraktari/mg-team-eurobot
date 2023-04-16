@@ -44,7 +44,7 @@ using namespace std;
 #define MAXNODES 7000
 #define MAXNODESINAREA 7
 #define TICKTIME 1000
-#define CLOSE 30000
+#define CLOSE 100000
 #define GOALDELTA2 2500
 #define ROBOTRADIUS 200
 #define GOALPERCENT 0.1
