@@ -17,8 +17,8 @@ Implementation : 1. * Add map, make some sort of graphics for each of the elemen
 ## Variables ##
 WINDOW_SIZE = (1200,800)
 
-LOCALTESTING = True
-NO_ODOMETRY = True
+LOCALTESTING = False
+NO_ODOMETRY = False
 
 ## Imports ##   
 import tarfile
@@ -275,8 +275,8 @@ def pure_pursuit(iface):
                     my_drive.axis1.controller.input_vel = friendBOT.vr/(8*numpy.pi)*6
                     #print(f1-time.time())
                 friendBOT.dmove(ncords[0]-24, 
-                            ncords[1], 
-                            -ncords[2]+numpy.pi/2)
+                            -ncords[1], 
+                            -ncords[2])
             
         #print(1/dt)
 
@@ -374,7 +374,7 @@ def thePyGameThread():
 def DWA(GoalPoint: gm.vec2):
     global friendBOT, BotList, FieldObjects
     MaxSpeed=50
-    MaxTheta=numpy.deg2rad(120)
+    MaxTheta=numpy.deg2rad(40)
     MaxAcceleration=25
     MaxTurnAcceleration=numpy.deg2rad(90)
     GoalMultiplier=32
@@ -400,7 +400,7 @@ def DWA(GoalPoint: gm.vec2):
     
     for vLposible in vLposiblearray:
         for vRposible in vRposiblearray:
-            if(abs(vLposible)<=MaxSpeed and abs(vRposible)<=MaxSpeed ):
+            if(abs(vLposible)<=MaxSpeed and abs(vRposible)<=MaxSpeed and abs((vLposible-vRposible)/friendBOT.width) <= MaxTheta ):
                 predictState = predictPos(vLposible,vRposible,dt*Steps,friendBOT)
 
 
