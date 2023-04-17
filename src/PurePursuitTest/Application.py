@@ -17,8 +17,8 @@ Implementation : 1. * Add map, make some sort of graphics for each of the elemen
 ## Variables ##
 WINDOW_SIZE = (1200,800)
 
-LOCALTESTING = False
-NO_ODOMETRY = False
+LOCALTESTING = True
+NO_ODOMETRY = True
 
 ## Imports ##   
 import tarfile
@@ -375,33 +375,42 @@ def DWA(GoalPoint: gm.vec2):
     global friendBOT, BotList, FieldObjects
     MaxSpeed=50
     MaxTheta=numpy.deg2rad(40)
-    MaxAcceleration=25
+    MaxAcceleration=50
     MaxTurnAcceleration=numpy.deg2rad(90)
-    GoalMultiplier=32
+    GoalMultiplier=1
     
-    ObstacleMultiplier=666
+    ObstacleMultiplier = 6666
+    ObstDistMultiplier = 900
     TargetVel = 12 * gm.length(gm.vec2(friendBOT.x,friendBOT.y)-GoalPoint)
     VelocityMultiplier=100
+    p = friendBOT.toLocalSystem(GoalPoint)
+    heading =gm.atan(p.y, p.x)
     TurningradiusMultiplier=1
     SmoothnesMultiplier=1
     OrientationMultiplier=1
+    HeadingMultiplier = 40
     SAFEDISTANCE=15
     vL = friendBOT.vl
     vR = friendBOT.vr
     dt = 0.1
-    Steps = 10
-    a = 2*MaxAcceleration/5
-    vLposiblearray = [vL-MaxAcceleration*dt+a*dt*i for i in range(0,5)]
+    Steps = 8
+    a = 2*MaxAcceleration/8
+    vLposiblearray = [vL-MaxAcceleration*dt+a*dt*i for i in range(0,8)]
     vLposiblearray.append(vL)
-    vRposiblearray = [vR-MaxAcceleration*dt+a*dt*i for i in range(0,5)]
+    vRposiblearray = [vR-MaxAcceleration*dt+a*dt*i for i in range(0,8)]
     vRposiblearray.append(vR)
     BestCost = 1000000000
     Best = None
     
+    oldObstDist  = obstDistance(friendBOT,friendBOT,FieldObjects)
     for vLposible in vLposiblearray:
         for vRposible in vRposiblearray:
             if(abs(vLposible)<=MaxSpeed and abs(vRposible)<=MaxSpeed and abs((vLposible-vRposible)/friendBOT.width) <= MaxTheta ):
                 predictState = predictPos(vLposible,vRposible,dt*Steps,friendBOT)
+
+                p1 = predictState.toLocalSystem(GoalPoint)
+                headingNew =gm.atan(p1.y, p1.x)
+                
 
 
                 x = friendBOT.x
@@ -410,11 +419,16 @@ def DWA(GoalPoint: gm.vec2):
                 B = gm.vec2(predictState.x,predictState.y)
                 DistImprovement = gm.distance(B,GoalPoint) - gm.distance(A,GoalPoint)
                 obstacleDist = obstDistance(predictState,friendBOT,FieldObjects)
+                headingImprovment = heading - headingNew
 
                 DistCost = GoalMultiplier * DistImprovement
-                if(obstacleDist < SAFEDISTANCE):
-                    obstacleCost = ObstacleMultiplier*(SAFEDISTANCE-obstacleDist)
+                headingCost = headingImprovment * HeadingMultiplier
+                
+                if(obstacleDist < 5*max(abs(vLposible),abs(vRposible))/MaxAcceleration):
+                    #ObstCost2 = max((oldObstDist-obstacleDist) * ObstDistMultiplier,0)
+                    obstacleCost = ObstacleMultiplier*max(1,(5*max(abs(vLposible),abs(vRposible))/MaxAcceleration-obstacleDist))
                 else:
+                    ObstCost2 = 0.0
                     obstacleCost = 0.0
                 VelCost = VelocityMultiplier*abs((vL+vR)/2 - TargetVel) 
                 Cost = obstacleCost + DistCost + VelCost

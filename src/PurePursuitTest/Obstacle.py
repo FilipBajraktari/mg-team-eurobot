@@ -23,7 +23,7 @@ class Obstacle:
 
 
         width = self.width*cm2p
-        height = self.width*cm2p
+        height = self.height*cm2p
         pygame.draw.rect(map,(100,100,100),(xi,yi,width,height), 0)
         pygame.draw.rect(map,(0,0,0),(xi,yi,width,height), 4)
     
