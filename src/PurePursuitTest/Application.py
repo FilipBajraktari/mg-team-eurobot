@@ -17,8 +17,8 @@ Implementation : 1. * Add map, make some sort of graphics for each of the elemen
 ## Variables ##
 WINDOW_SIZE = (1200,800)
 
-LOCALTESTING = True
-NO_ODOMETRY = True
+LOCALTESTING = False
+NO_ODOMETRY = False
 
 ## Imports ##   
 import tarfile
@@ -182,8 +182,8 @@ def WriteToFB():
     global Map,friendBOT
     base = vec2(Robot.x0,Robot.y0)
     __fb__.blit(__bg__,(0,0))
-    xl = obstDistance(friendBOT,friendBOT,FieldObjects)
-    pygame.draw.circle(__fb__,(40,200,10),base+vec2(Robot.cm2p,-Robot.cm2p)*(friendBOT.x,friendBOT.y),xl*Robot.cm2p)
+    #xl = obstDistance(friendBOT,friendBOT,FieldObjects)
+    #pygame.draw.circle(__fb__,(40,200,10),base+vec2(Robot.cm2p,-Robot.cm2p)*(friendBOT.x,friendBOT.y),xl*Robot.cm2p)
     for x in Map:
         if x[2]<0:
             continue
@@ -278,7 +278,7 @@ def pure_pursuit(iface):
                             -ncords[1], 
                             -ncords[2])
             
-        #print(1/dt)
+        print(1/dt)
 
 
 def rrtSend():
@@ -292,7 +292,7 @@ def rrtRecv(path,Tree):
     if friendBOT==None:
         return
     friendBOT.waypoints = [((x[0]+250-1500)/10,(x[1]+250-1000)/10) for x in path]
-    Map = Tree
+    #Map = Tree
     friendBOT.lastWaypoint=0
 
 def rrtError(e):
@@ -373,14 +373,14 @@ def thePyGameThread():
 
 def DWA(GoalPoint: gm.vec2,head):
     global friendBOT, BotList, FieldObjects
-    MaxSpeed=50
+    MaxSpeed=30
     MaxTheta=numpy.deg2rad(40)
     MaxAcceleration=50
     #MaxTurnAcceleration=numpy.deg2rad(90)
     GoalMultiplier=8
     
     ObstacleMultiplier = 6666
-    ObstacleRoughMultiplier = 1800
+    ObstacleRoughMultiplier = 1900
     ObstDistMultiplier = 900
     #TargetVel = 12 * gm.length(gm.vec2(friendBOT.x,friendBOT.y)-GoalPoint)
     VelocityMultiplier=0
@@ -394,7 +394,7 @@ def DWA(GoalPoint: gm.vec2,head):
     vL = friendBOT.vl
     vR = friendBOT.vr
     dt = 0.1
-    Steps = 5
+    Steps = 8
     a = 2*MaxAcceleration/5
     vLposiblearray = [vL-MaxAcceleration*dt+a*dt*i for i in range(0,5)]
     vLposiblearray.append(vL)
@@ -426,7 +426,7 @@ def DWA(GoalPoint: gm.vec2,head):
                 DistCost = GoalMultiplier * DistImprovement
                 headingCost = headingImprovment * HeadingMultiplier
                 
-                if(obstacleDist < max(1,max(abs(vLposible),abs(vRposible))/MaxAcceleration)):
+                if(obstacleDist < max(1,2*max(abs(vLposible),abs(vRposible))/MaxAcceleration)):
                     obstacleRoughCost = ObstacleRoughMultiplier*max(1-obstacleRoughDist,(max(abs(vLposible),abs(vRposible))/MaxAcceleration-obstacleRoughDist))
                     obstacleCost = ObstacleMultiplier*max(1-obstacleRoughDist,(max(abs(vLposible),abs(vRposible))/MaxAcceleration-obstacleDist))
                 else:
