@@ -375,30 +375,30 @@ def DWA(GoalPoint: gm.vec2,head):
     global friendBOT, BotList, FieldObjects
     MaxSpeed=50
     MaxTheta=numpy.deg2rad(40)
-    MaxAcceleration=40
-    MaxTurnAcceleration=numpy.deg2rad(90)
-    GoalMultiplier=12
+    MaxAcceleration=50
+    #MaxTurnAcceleration=numpy.deg2rad(90)
+    GoalMultiplier=8
     
     ObstacleMultiplier = 6666
-    ObstacleRoughMultiplier = 1900
+    ObstacleRoughMultiplier = 1800
     ObstDistMultiplier = 900
-    TargetVel = 12 * gm.length(gm.vec2(friendBOT.x,friendBOT.y)-GoalPoint)
+    #TargetVel = 12 * gm.length(gm.vec2(friendBOT.x,friendBOT.y)-GoalPoint)
     VelocityMultiplier=0
     p = friendBOT.toLocalSystem(GoalPoint)
     heading =gm.atan(p.y, p.x)
-    TurningradiusMultiplier=1
-    SmoothnesMultiplier=1
-    OrientationMultiplier=1
+    #TurningradiusMultiplier=1
+    #SmoothnesMultiplier=1
+    #OrientationMultiplier=1
     HeadingMultiplier = 90
     SAFEDISTANCE=15
     vL = friendBOT.vl
     vR = friendBOT.vr
     dt = 0.1
     Steps = 5
-    a = 2*MaxAcceleration/8
-    vLposiblearray = [vL-MaxAcceleration*dt+a*dt*i for i in range(0,8)]
+    a = 2*MaxAcceleration/5
+    vLposiblearray = [vL-MaxAcceleration*dt+a*dt*i for i in range(0,5)]
     vLposiblearray.append(vL)
-    vRposiblearray = [vR-MaxAcceleration*dt+a*dt*i for i in range(0,8)]
+    vRposiblearray = [vR-MaxAcceleration*dt+a*dt*i for i in range(0,5)]
     vRposiblearray.append(vR)
     BestCost = 1000000000
     Best = None
@@ -421,27 +421,25 @@ def DWA(GoalPoint: gm.vec2,head):
                 DistImprovement = gm.distance(B,GoalPoint) - gm.distance(A,GoalPoint)
                 obstacleDist = obstDistance(predictState,friendBOT,FieldObjects)
                 obstacleRoughDist = obstRoughDistance(predictState,friendBOT,FieldObjects)
-                headingImprovment = heading - headingNew
+                headingImprovment = abs(headingNew) - abs(heading)
 
                 DistCost = GoalMultiplier * DistImprovement
                 headingCost = headingImprovment * HeadingMultiplier
                 
-                if(obstacleDist < max(abs(vLposible),abs(vRposible))/MaxAcceleration):
-                    obstacleRoughCost = ObstacleRoughMultiplier*max(1,(max(abs(vLposible),abs(vRposible))/MaxAcceleration-obstacleRoughDist))
-                    obstacleCost = ObstacleMultiplier*max(1,(max(abs(vLposible),abs(vRposible))/MaxAcceleration-obstacleDist))
+                if(obstacleDist < max(1,max(abs(vLposible),abs(vRposible))/MaxAcceleration)):
+                    obstacleRoughCost = ObstacleRoughMultiplier*max(1-obstacleRoughDist,(max(abs(vLposible),abs(vRposible))/MaxAcceleration-obstacleRoughDist))
+                    obstacleCost = ObstacleMultiplier*max(1-obstacleRoughDist,(max(abs(vLposible),abs(vRposible))/MaxAcceleration-obstacleDist))
                 else:
                     obstacleRoughCost = 0.0
                     obstacleCost = 0.0
-                VelCost = VelocityMultiplier*abs((vL+vR)/2 - TargetVel) 
-                Cost = obstacleCost + DistCost + VelCost + obstacleRoughCost + headingCost
-                #print(f'Cost: {Cost}, vL:{vLposible}, vR:{vRposible}')
+                #VelCost = VelocityMultiplier*abs((vL+vR)/2 - TargetVel) 
+                Cost = obstacleCost + DistCost + obstacleRoughCost + headingCost
                 if(BestCost > Cost):
                     BestCost = Cost
                     Best = vLposible,vRposible
                     friendBOT.target = (B.x,B.y)
 
     friendBOT.vl, friendBOT.vr = Best
-    #print("ASdAAD")
 
 
                 
