@@ -182,8 +182,8 @@ def WriteToFB():
     global Map,friendBOT
     base = vec2(Robot.x0,Robot.y0)
     __fb__.blit(__bg__,(0,0))
-    #xl = obstDistance(friendBOT,friendBOT,FieldObjects)
-    #pygame.draw.circle(__fb__,(40,200,10),base+vec2(Robot.cm2p,-Robot.cm2p)*(friendBOT.x,friendBOT.y),xl*Robot.cm2p)
+    xl = obstDistance(friendBOT,friendBOT,FieldObjects)
+    pygame.draw.circle(__fb__,(40,200,10),base+vec2(Robot.cm2p,-Robot.cm2p)*(friendBOT.x,friendBOT.y),xl*Robot.cm2p)
     for x in Map:
         if x[2]<0:
             continue
@@ -258,10 +258,10 @@ def pure_pursuit(iface):
             goal = None
             for wa in friendBOT.waypoints:
                 goal = wa
-                if gm.distance2(wa,(friendBOT.x,friendBOT.y))>800:
+                if gm.distance2(wa,(friendBOT.x,friendBOT.y))>min(400,obstDistance(friendBOT,friendBOT,FieldObjects)**2):
                     break
             if goal != None:
-                DWA(goal)
+                DWA(goal,friendBOT.waypoints[1%len(friendBOT.waypoints)])
             #friendBOT.SetState(vl,vr)
             if NO_ODOMETRY:
                 friendBOT.move(dt)
@@ -371,29 +371,30 @@ def thePyGameThread():
         pygame.display.update()
         __clock__.tick(60)
 
-def DWA(GoalPoint: gm.vec2):
+def DWA(GoalPoint: gm.vec2,head):
     global friendBOT, BotList, FieldObjects
     MaxSpeed=50
     MaxTheta=numpy.deg2rad(40)
-    MaxAcceleration=50
+    MaxAcceleration=40
     MaxTurnAcceleration=numpy.deg2rad(90)
-    GoalMultiplier=1
+    GoalMultiplier=12
     
     ObstacleMultiplier = 6666
+    ObstacleRoughMultiplier = 1900
     ObstDistMultiplier = 900
     TargetVel = 12 * gm.length(gm.vec2(friendBOT.x,friendBOT.y)-GoalPoint)
-    VelocityMultiplier=100
+    VelocityMultiplier=0
     p = friendBOT.toLocalSystem(GoalPoint)
     heading =gm.atan(p.y, p.x)
     TurningradiusMultiplier=1
     SmoothnesMultiplier=1
     OrientationMultiplier=1
-    HeadingMultiplier = 40
+    HeadingMultiplier = 90
     SAFEDISTANCE=15
     vL = friendBOT.vl
     vR = friendBOT.vr
     dt = 0.1
-    Steps = 8
+    Steps = 5
     a = 2*MaxAcceleration/8
     vLposiblearray = [vL-MaxAcceleration*dt+a*dt*i for i in range(0,8)]
     vLposiblearray.append(vL)
@@ -419,19 +420,20 @@ def DWA(GoalPoint: gm.vec2):
                 B = gm.vec2(predictState.x,predictState.y)
                 DistImprovement = gm.distance(B,GoalPoint) - gm.distance(A,GoalPoint)
                 obstacleDist = obstDistance(predictState,friendBOT,FieldObjects)
+                obstacleRoughDist = obstRoughDistance(predictState,friendBOT,FieldObjects)
                 headingImprovment = heading - headingNew
 
                 DistCost = GoalMultiplier * DistImprovement
                 headingCost = headingImprovment * HeadingMultiplier
                 
-                if(obstacleDist < 5*max(abs(vLposible),abs(vRposible))/MaxAcceleration):
-                    #ObstCost2 = max((oldObstDist-obstacleDist) * ObstDistMultiplier,0)
-                    obstacleCost = ObstacleMultiplier*max(1,(5*max(abs(vLposible),abs(vRposible))/MaxAcceleration-obstacleDist))
+                if(obstacleDist < max(abs(vLposible),abs(vRposible))/MaxAcceleration):
+                    obstacleRoughCost = ObstacleRoughMultiplier*max(1,(max(abs(vLposible),abs(vRposible))/MaxAcceleration-obstacleRoughDist))
+                    obstacleCost = ObstacleMultiplier*max(1,(max(abs(vLposible),abs(vRposible))/MaxAcceleration-obstacleDist))
                 else:
-                    ObstCost2 = 0.0
+                    obstacleRoughCost = 0.0
                     obstacleCost = 0.0
                 VelCost = VelocityMultiplier*abs((vL+vR)/2 - TargetVel) 
-                Cost = obstacleCost + DistCost + VelCost
+                Cost = obstacleCost + DistCost + VelCost + obstacleRoughCost + headingCost
                 #print(f'Cost: {Cost}, vL:{vLposible}, vR:{vRposible}')
                 if(BestCost > Cost):
                     BestCost = Cost
@@ -451,6 +453,15 @@ def predictPos(vL, vR, delta,friendBOT):
     p.move(delta)
     return p
 
+def obstRoughDistance(prediction : RoboT,fiendBOT: RoboT,FielldObjects):
+    global friendBOT,FieldObjects
+    mindist = 100000
+    for FO in FieldObjects:
+        if (FO.x,FO.y) != (friendBOT.x,friendBOT.y):
+            x = prediction.toLocalSystem((FO.x,FO.y))
+            p = x
+            mindist = min(mindist,  (gm.length(p)-FO.radius-25))
+    return mindist
 def obstDistance(prediction : RoboT,fiendBOT: RoboT,FielldObjects):
     global friendBOT,FieldObjects
     mindist = 100000
