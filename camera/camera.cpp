@@ -1,6 +1,6 @@
 #include <stdio.h>
-#include <opencv2/opencv.hpp>
-#include <opencv2/aruco.hpp>
+#include <opencv4/opencv.hpp>
+#include <opencv4/aruco.hpp>
 #include <iostream>
 
 int main(int, char**) {

@@ -101,6 +101,7 @@ typedef unordered_set<int>     si;
 static int           addNode(cPoint xRand, int xClose, li &near);
 static void          blockNodes(cPoint Obst);
 static bool          checkPoint(cPoint x);
+static void          c_error(const char e);
 static float         cost(int Node);
 static int           depth(int Node);
 static float         dot(cPoint x, cPoint y);
@@ -128,6 +129,7 @@ static cPoint        sampleLine();
 static cPoint        sampleNewNode();
 static cPoint        samplePoint();
 static char          testLine(cPoint x, cPoint y);
+static void          tpRoot(int Node);
 static void          updatePP();
 
 static const float     BlockSizeX = AREAX/GRID_X;
@@ -161,6 +163,7 @@ static li              Qr;
 static li              Qs;
 static clock_t         TickStart;
 static int             TicksSinceLastReset;
+static int             TpPath[MAXNODES];
 static si              WhasInQs;
 static si              Visited;
 
@@ -219,6 +222,19 @@ blockNodes(cPoint obst)
             }
         }
     }
+}
+
+static void
+c_error(const char* s)
+{
+
+        PyObject *str = PyUnicode_FromString(s);
+        PyObject *args = Py_BuildValue("(O)",str);
+        PyObject_CallObject(ErrMeth, args);
+        PyErr_Print();
+        Py_DECREF(str);
+        Py_DECREF(args);
+        PyErr_Print();
 }
 
 static bool
@@ -596,7 +612,50 @@ readStateFromDbus()
         exit(-1);
     }
     Py_INCREF(obst);
-    if(Goal.x!=_Goal.x && Goal.y!=_Goal.y)
+    ObstaclesC=_ObstaclesC;
+    Blocked.clear();
+    for(int i=0;i<ObstaclesC;i++){
+        PyObject *o;
+        o = PyList_GetItem(obst,i);
+        Py_INCREF(o);
+        if(!PyArg_ParseTuple(o,"fff",&Obstacles[i].x,&Obstacles[i].y,&Obstacles[i].radius))
+        {
+            PyErr_Print();
+            exit(1);
+        }
+        list<list<int> *> subset;
+        blockNodes(Obstacles[i]);
+        Py_DECREF(o);
+        PyErr_Print();
+    }
+    if(_Goal.x == -1,_Goal.y == -1)
+    {
+        list<list<int> *> subset;
+        getSubset(Robot,subset);
+        li field;
+        int xClose=-1;
+        float Closest = -1.0f;
+        for(const auto &q : subset)
+        {
+            for(const auto &x: *q)
+            {
+                if(Closest == -1.0f || Closest > dist2(Nodes[x],Robot) && !Blocked.count(x))
+                {
+                    Closest = dist2(Nodes[x],Robot);
+                    xClose = x;
+                }
+            }
+        }
+        if(xClose<0)
+        {
+            c_error("[PANIC]: change root");
+        }
+        else
+        {
+            tpRoot(xClose);
+        }
+ 
+    } else if(Goal.x!=_Goal.x && Goal.y!=_Goal.y)
     {
         GoalReached=false;
         list<list<int> *> pointNearArea;
@@ -623,22 +682,6 @@ readStateFromDbus()
     }
     Robot=_Robot;
     Goal=_Goal;
-    ObstaclesC=_ObstaclesC;
-    Blocked.clear();
-    for(int i=0;i<ObstaclesC;i++){
-        PyObject *o;
-        o = PyList_GetItem(obst,i);
-        Py_INCREF(o);
-        if(!PyArg_ParseTuple(o,"fff",&Obstacles[i].x,&Obstacles[i].y,&Obstacles[i].radius))
-        {
-            PyErr_Print();
-            exit(1);
-        }
-        list<list<int> *> subset;
-        blockNodes(Obstacles[i]);
-        Py_DECREF(o);
-        PyErr_Print();
-    }
     Py_DECREF(obst);
     PyErr_Print();
     return;
@@ -824,6 +867,30 @@ testLine(cPoint x, cPoint y)
     return true;
 }
 
+static void
+tpRoot(int Node)
+{
+    int x=0;
+    int c = Node;
+    while (c!=Root)
+    {
+        TpPath[x]=c;
+        c = Parent[c];
+        x++;
+    }
+    TpPath[x++]=Root;
+    for(int i = x;i>0;i--)
+    {
+        int a = TpPath[x];
+        int b = TpPath[x-1];
+        Parent[b]=a;
+        Root = b;
+
+        Visited.clear();
+    }
+    Qr.clear();
+    Qs.clear();
+}
 static void
 updatePP()
 {

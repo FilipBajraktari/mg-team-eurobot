@@ -17,8 +17,8 @@ Implementation : 1. * Add map, make some sort of graphics for each of the elemen
 ## Variables ##
 WINDOW_SIZE = (1200,800)
 
-LOCALTESTING = False
-NO_ODOMETRY = False
+LOCALTESTING = True
+NO_ODOMETRY = True
 
 ## Imports ##   
 import tarfile
@@ -260,6 +260,8 @@ def pure_pursuit(iface):
                 goal = wa
                 if gm.distance2(wa,(friendBOT.x,friendBOT.y))>min(400,obstDistance(friendBOT,friendBOT,FieldObjects)**2):
                     break
+            if goal!=None and (gm.distance2(friendBOT.waypoints[-1],(friendBOT.x,friendBOT.y))<400):
+                goal = friendBOT.waypoints[-1]
             if goal != None:
                 DWA(goal,friendBOT.waypoints[1%len(friendBOT.waypoints)])
             #friendBOT.SetState(vl,vr)
@@ -292,7 +294,7 @@ def rrtRecv(path,Tree):
     if friendBOT==None:
         return
     friendBOT.waypoints = [((x[0]+250-1500)/10,(x[1]+250-1000)/10) for x in path]
-    #Map = Tree
+    Map = Tree
     friendBOT.lastWaypoint=0
 
 def rrtError(e):
