@@ -276,9 +276,7 @@ def pure_pursuit(iface):
                     my_drive.axis0.controller.input_vel = -friendBOT.vl/(8*numpy.pi)*6
                     my_drive.axis1.controller.input_vel = friendBOT.vr/(8*numpy.pi)*6
                     #print(f1-time.time())
-                friendBOT.dmove(ncords[0]-24, 
-                            -ncords[1], 
-                            -ncords[2])
+                friendBOT.dmove(ncords[0]-24, ncords[1], ncords[2])
             
         print(1/dt)
 

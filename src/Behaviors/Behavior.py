@@ -5,6 +5,12 @@ from glm import vec2
 from PurePursuitTest.Robot import RoboT
 import numpy
 import copy
+import time
+import numpy as np
+
+# ODrive variables
+INPUT_MODE_PASSTHROUGH = 1
+INPUT_MODE_VEL_RAMP    = 2
 
 class Controller(ABC):
     iface    : dbus.Interface
@@ -45,24 +51,33 @@ class Controller(ABC):
     def stop(self):
         self.odrv0.axis0.controller.input_vel = 0
         self.odrv0.axis1.controller.input_vel = 0
+        self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
+        self.odrv0.axis1.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
 
 
-class TurnAbsolute(Controller):
-    goal : float
-    K_p  : float
+class TurnRelative(Controller):
+    rel_pos : float
+    goal    : float = None
+    K_p     : float = 0.5
 
     ERROR_MARGINE : float = 0.1
 
-    def __init__(self, iface, ifaceAI, odrv0, goal) -> None:
+    def __init__(self, iface, ifaceAI, odrv0, rel_pos) -> None:
         super().__init__(iface, ifaceAI, odrv0)
-        self.goal = goal
+        self.rel_pos = rel_pos
 
     def Loop(self) -> None:
-        x, y, theta = self.iface.get_random_state_space()
+        x, y, theta, _, _ = self.iface.get_state_space()
+
+        # Set the goal
+        if self.goal == None:
+            self.goal = theta + self.rel_pos
+            self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_VEL_RAMP
+            self.odrv0.axis1.controller.config.input_mode = INPUT_MODE_VEL_RAMP
 
         # Check if the goal is reached
         e = self.goal - theta
-        if e < self.ERROR_MARGINE:
+        if np.abs(e) < self.ERROR_MARGINE:
             self.stop()
             self.Complete = True
             return
@@ -71,8 +86,54 @@ class TurnAbsolute(Controller):
         omega = self.K_p*e
 
         # Set omega
-        omega = 1
         self.rotate(omega)
+
+        return
+    
+    def SafeExit(self) -> None:
+        self.stop()
+        print("Stopped due to canceling behaviour.")
+        return
+
+class MoveRelative(Controller):
+    distance : float
+    goal     : float = None
+    K_p      : float = 0.01
+
+    MAX_SPEED     : float = 0.5
+    ERROR_MARGINE : float = 1
+
+    def __init__(self, iface, ifaceAI, odrv0, distance) -> None:
+        super().__init__(iface, ifaceAI, odrv0)
+        self.distance = distance
+
+    def Loop(self) -> None:
+        x, y, theta, _, _ = self.iface.get_state_space()
+
+        # Set the goal
+        if self.goal == None:
+            self.goal = (x + self.distance*np.cos(theta),
+                         y + self.distance*np.sin(theta))
+            self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_VEL_RAMP
+            self.odrv0.axis1.controller.config.input_mode = INPUT_MODE_VEL_RAMP
+
+        # Check if the goal is reached
+        e = np.sqrt(np.square(self.goal[0]-x) + np.square(self.goal[1]-y))
+        # print(self.goal)
+        # print(x, y)
+        # print(e)
+        # print("----------------------")
+        if np.abs(e) < self.ERROR_MARGINE:
+            self.stop()
+            self.Complete = True
+            return
+
+        # Calculate velocity using PID
+        velocity = np.sign(self.distance)*self.K_p*e
+        # velocity = np.minimum(velocity, self.MAX_SPEED)
+
+        # Set velocity
+        self.move(velocity)
 
         return
     
@@ -201,7 +262,7 @@ class Traverse(Controller):
 
 class Template_Controller(Controller):
     def Loop(self) -> None:
-        Contemp = self.iface.get_random_state_space()
+        Contemp = self.iface.get_state_space()
         print(f"{Contemp[0]}, {Contemp[1]}, {Contemp[2]}")
         if Contemp[2] > 1:
             self.Complete=True

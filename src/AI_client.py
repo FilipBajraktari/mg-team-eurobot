@@ -8,20 +8,20 @@ import dbus
 import dbus.service
 import dbus.mainloop.glib
 
-from Behaviors.Behavior_template import *
+from Behaviors.Behavior import *
 
 iface = None
 iface_ai = None
-CancelRequired = object()
+CancelRequired = False
 
-def Master(x):
-    print("working")
-    while not x.Complete:
-        x.ControlLoop(CancelRequired)
-    if x.Error:
-        print(x.Error)
-    return
-
+def Master(action_queue):
+    print("Master started working.")
+    while True:
+        behaviour = action_queue.get()
+        while not behaviour.Complete:
+            behaviour.ControlLoop(CancelRequired)
+        if behaviour.Error:
+            print(behaviour.Error)
 
 def main():
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
@@ -34,20 +34,21 @@ def main():
 
     odrv0 = odrive.find_any()
 
-    worker = None
+    action_queue = Queue()
+    worker = Thread(target=Master, args=(action_queue, ))
+    worker.daemon = True
+    worker.start()
+    fill_the_stack = True
     while True:
         # AI STUFF
         # current_state_space = iface.get_random_state_space()
         # iface_ai.emit_new_desired_position([0,0,0])
 
-        if not worker:
-            behaviour = TurnAbsolute(iface, iface_ai, odrv0, np.pi/2)
-            worker = Thread(target=Master, args=(behaviour,))
-            worker.daemon = True
-            worker.start()
-        if worker.is_alive() == False:
-            worker = None
-            print("Im finished ;)")
+        if fill_the_stack:
+            # behaviour = TurnRelative(iface, iface_ai, odrv0, 3*np.pi/2)
+            behaviour = MoveRelative(iface, iface_ai, odrv0, -10)
+            action_queue.put(behaviour)
+            fill_the_stack = False
         
         time.sleep(.1)
         
