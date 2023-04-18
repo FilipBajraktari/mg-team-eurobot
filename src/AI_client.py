@@ -1,21 +1,23 @@
 import time
+import odrive
+import numpy as np
+from queue import Queue
+from threading import Thread
 
-import threading
 import dbus
 import dbus.service
 import dbus.mainloop.glib
+
 from Behaviors.Behavior_template import *
 
 iface = None
 iface_ai = None
-CancelRequired = False
+CancelRequired = object()
 
-def Action(x):
+def Master(x):
     print("working")
-    global CancelRequired
-    StateSpace = None
-    while not (x.Complete):
-        x.ControlLoop(StateSpace,CancelRequired)
+    while not x.Complete:
+        x.ControlLoop(CancelRequired)
     if x.Error:
         print(x.Error)
     return
@@ -30,24 +32,24 @@ def main():
     iface = dbus.Interface(remote_object, "com.mgrobotics.OdometryInterface")
     iface_ai = dbus.Interface(remote_object, "com.mgrobotics.AI")
 
+    odrv0 = odrive.find_any()
 
-
-    x = Template_Controller(iface = iface)
     worker = None
     while True:
         # AI STUFF
-        current_state_space = iface.get_random_state_space()
+        # current_state_space = iface.get_random_state_space()
         # iface_ai.emit_new_desired_position([0,0,0])
+
         if not worker:
-            worker = threading.Thread(target = Action, args=(Template_Controller(iface = iface),))
-            worker.daemon=True
+            behaviour = TurnAbsolute(iface, iface_ai, odrv0, np.pi/2)
+            worker = Thread(target=Master, args=(behaviour,))
+            worker.daemon = True
             worker.start()
         if worker.is_alive() == False:
             worker = None
             print("Im finished ;)")
         
-        print("Thinking...")
-        time.sleep(1)
+        time.sleep(.1)
         
 
 if __name__ == '__main__':
