@@ -54,9 +54,10 @@ class Controller(ABC):
         self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
         self.odrv0.axis1.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
 
-class TurnAbsolute(Controller):
-    goal : float
-    K_p  : float
+class TurnRelative(Controller):
+    rel_pos : float
+    goal    : float = None
+    K_p     : float = 0.5
 
     ERROR_MARGINE : float = 0.1
 
