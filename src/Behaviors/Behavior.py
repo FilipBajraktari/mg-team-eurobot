@@ -170,7 +170,7 @@ class Traverse(Controller):
         waypoints = self.ifaceRrt.GetWaypoints()
         #print(self.friendBOT.x,self.friendBOT.y)
         #print(self.friendBOT.vl,self.friendBOT.vr)
-        print("----")
+        #print("----")
         if len(waypoints)<1 or  round(waypoints[-1][0],3) != round(Target.x,3) or round(waypoints[-1][1], 3) != round(Target.y,3):
             if self.Timeout>0:
                 self.Timeout-=1
@@ -332,6 +332,6 @@ def TargetCake(self:Traverse)->vec2:
 
 def TargetExact(self:Traverse)->vec2:
     a : vec2 = self.Args
-    print(a)
+    #print(a)
     return a
 

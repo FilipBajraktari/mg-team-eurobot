@@ -28,10 +28,10 @@ def rrtSend():
     global lidar_iface, iface, lock
     while iface == None or lidar_iface == None: 
         time.sleep(0.1)
-    print("LLL") 
+    #print("LLL") 
     Obstacles = lidar_iface.opponents_coordinates(3)
     #Obstacles = []
-    print(Obstacles)
+    #print(Obstacles)
 
     Obstacles = [(max(0,A+xOffset-250),max(0,B+yOffset-250),200) for A,B in Obstacles]
     
@@ -49,8 +49,8 @@ def rrtSend():
         x_d+= xOffset-250
         y_d = 10 * y_desired
         y_d+= yOffset-250
-    if len(Obstacles)>0:
-        print(Obstacles) 
+    #if len(Obstacles)>0:
+        #print(Obstacles) 
     return (ncords[0], ncords[1], x_d,y_d,Obstacles,len(Obstacles))
 
 def rrtRecv(path,Tree):

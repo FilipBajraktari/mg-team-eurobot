@@ -86,12 +86,12 @@ class Lidar(dbus.service.Object):
     @dbus.service.method("com.mgrobotics.LidarInterface",
                          in_signature='i', out_signature='a(dd)')
     def opponents_coordinates(self, number_of_clusters=1):
-        print("Ja sam tupac sahkur i krenuo sam svoju rep karijeru")
+        #print("Ja sam tupac sahkur i krenuo sam svoju rep karijeru")
         points_cpy = []
 
         
         with lock:
-            print("Sad sam u zatvor")
+            #print("Sad sam u zatvor")
             if len(points) < number_of_clusters:
                 return points
             else:
@@ -101,7 +101,7 @@ class Lidar(dbus.service.Object):
         # points_cpy = points
 
         if points_cpy == []:
-            print("Sad sam van zatvora al nemam para")
+            #print("Sad sam van zatvora al nemam para")
             return points_cpy
         
         if number_of_clusters == 1:
@@ -111,7 +111,7 @@ class Lidar(dbus.service.Object):
                 x += point[0]
                 y += point[1]
             n = len(points_cpy)
-            print("Sad imam para jer ima tacaka")
+            #print("Sad imam para jer ima tacaka")
             return [(x/n, y/n)]
         
         # Clusterization
@@ -128,7 +128,7 @@ class Lidar(dbus.service.Object):
 
         opponents = [(cluster[1]/cluster[0], cluster[2]/cluster[0]) 
                     for cluster in clusters]
-        print("ja sam sad mrtav cika jer sam bio dobio drajv baj ka-ka")
+        #print("ja sam sad mrtav cika jer sam bio dobio drajv baj ka-ka")
         return opponents
     
     @dbus.service.method("com.mgrobotics.LidarInterface",
@@ -150,25 +150,20 @@ if __name__ == "__main__":
     estop_iface = dbus.Interface(remote_object, "com.mgrobotics.EmergencyStop")
 
     
+    #lidar = FastestRplidar()
+    #lidar.connectlidar()
+    #lidar.stopmotor()
+    #lidar = FastestRplidar()
+    #lidar.connectlidar()
+    #lidar.stopmotor()
+    #lidar = FastestRplidar()
+    #print("Fast")
+    #lidar.connectlidar()
+    #lidar.stopmotor()
+    ## Lidar initialization
+    #print("pre")
     lidar = FastestRplidar()
     lidar.connectlidar()
-    lidar.stopmotor()
-    lidar = FastestRplidar()
-    lidar.connectlidar()
-    lidar.stopmotor()
-    lidar = FastestRplidar()
-    print("Fast")
-    lidar.connectlidar()
-    lidar.stopmotor()
-    # Lidar initialization
-    print("pre")
-    lidar = FastestRplidar()
-    print("Fast")
-    lidar.connectlidar()
-    print("connect")
-    time.sleep(1)
-    print(lidar)
-    #lidar.startmotor(my_scanmode=2)
     lidar.startmotor(my_scanmode=2)
     #result = lidar.fetchscandata()
 

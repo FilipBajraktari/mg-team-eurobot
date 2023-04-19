@@ -31,7 +31,7 @@ def pure_pursuit(iface, lidar_iface):
         # print(type(iface.get_random_state_space()[0]))
 
         # print(estop)
-        print(lidar_iface.opponents_coordinates(3))
+        #print(lidar_iface.opponents_coordinates(3))
         time.sleep(.1)
 
 def main():
