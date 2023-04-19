@@ -27,7 +27,7 @@ class RoboT:
         self.prevRot= math.radians(0)
         self.prevDiff=0
         self.prevTurnError=0
-        self.radius = robotImg.get_width()/2/cm2p
+        self.radius = 19
         
 
         #Graphics

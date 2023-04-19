@@ -1,5 +1,10 @@
 from abc import ABC, abstractmethod
 import dbus
+import glm
+from glm import vec2
+from PurePursuitTest.Robot import RoboT
+import numpy
+import copy
 
 class Controller(ABC):
     iface    : dbus.Interface
@@ -76,6 +81,124 @@ class TurnAbsolute(Controller):
         print("Stopped due to canceling behaviour.")
         return
 
+class Traverse(Controller):
+    GetTargetFunc : function
+    Args : function
+    friendBot : RoboT
+    def __init__(self, iface, ifaceAI, odrv0, goal, args, GetTrargetFunc : function) -> None:
+        self.GetTargetFunc = GetTrargetFunc
+        self.Args = args
+        self.friendBot = RoboT((0,0),None,23.5)
+        self.goal = goal
+
+    def Loop(self) -> None:
+        state = self.iface.get_state_space()
+        self.obstacles = self.iface.get_obstacles()
+        self.friendBot.dmove(state)
+        Target : vec2 = self.GetTargetFunc(self.Args)
+        self.ifaceAI.emit_new_lookahead(Target.x,Target.y)
+        self.DWA(self.obstacles,Target)
+        self.odrv0.axis0.controller.input_value=  self.friendBOT.vl
+        self.odrv0.axis1.controller.input_value= -self.friendBOT.vr
+
+    def SafeExit(self) -> None:
+        self.odrv0.axis0.controller.input_value= 0
+        self.odrv0.axis1.controller.input_value= 0
+    
+    def DWA(self, FieldObjects, GoalPoint: glm.vec2):
+        MaxSpeed=30
+        MaxTheta=numpy.deg2rad(40)
+        MaxAcceleration=50
+        #MaxTurnAcceleration=numpy.deg2rad(90)
+        GoalMultiplier=8
+        
+        ObstacleMultiplier = 6666
+        ObstacleRoughMultiplier = 1900
+        ObstDistMultiplier = 900
+        #TargetVel = 12 * gm.length(gm.vec2(friendBOT.x,friendBOT.y)-GoalPoint)
+        VelocityMultiplier=0
+        p = self.friendBOT.toLocalSystem(GoalPoint)
+        heading =glm.atan(p.y, p.x)
+        
+        HeadingMultiplier = 90
+        SAFEDISTANCE=15
+        vL = self.friendBOT.vl
+        vR = self.friendBOT.vr
+        dt = 0.1
+        Steps = 8
+        a = 2*MaxAcceleration/5
+        vLposiblearray = [vL-MaxAcceleration*dt+a*dt*i for i in range(0,5)]
+        vLposiblearray.append(vL)
+        vRposiblearray = [vR-MaxAcceleration*dt+a*dt*i for i in range(0,5)]
+        vRposiblearray.append(vR)
+        BestCost = 1000000000
+        Best = None
+        
+        oldObstDist  = self.obstDistance(self.friendBOT,self.friendBOT,FieldObjects)
+        for vLposible in vLposiblearray:
+            for vRposible in vRposiblearray:
+                if(abs(vLposible)<=MaxSpeed and abs(vRposible)<=MaxSpeed and abs((vLposible-vRposible)/self.friendBOT.width) <= MaxTheta ):
+                    predictState = self.predictPos(vLposible,vRposible,dt*Steps,self.friendBOT)
+
+                    p1 = predictState.toLocalSystem(GoalPoint)
+                    headingNew =glm.atan(p1.y, p1.x)
+                    
+
+
+                    x = self.friendBOT.x
+                    y = self.friendBOT.y
+                    A = glm.vec2(x,y)
+                    B = glm.vec2(predictState.x,predictState.y)
+                    DistImprovement = glm.distance(B,GoalPoint) - glm.distance(A,GoalPoint)
+                    obstacleDist = self.obstDistance(predictState,self.friendBOT,FieldObjects)
+                    obstacleRoughDist = self.obstRoughDistance(predictState,self.friendBOT,FieldObjects)
+                    headingImprovment = abs(headingNew) - abs(heading)
+
+                    DistCost = GoalMultiplier * DistImprovement
+                    headingCost = headingImprovment * HeadingMultiplier
+                    
+                    if(obstacleDist < max(1,2*max(abs(vLposible),abs(vRposible))/MaxAcceleration)):
+                        obstacleRoughCost = ObstacleRoughMultiplier*max(1-obstacleRoughDist,(max(abs(vLposible),abs(vRposible))/MaxAcceleration-obstacleRoughDist))
+                        obstacleCost = ObstacleMultiplier*max(1-obstacleRoughDist,(max(abs(vLposible),abs(vRposible))/MaxAcceleration-obstacleDist))
+                    else:
+                        obstacleRoughCost = 0.0
+                        obstacleCost = 0.0
+                    #VelCost = VelocityMultiplier*abs((vL+vR)/2 - TargetVel) 
+                    Cost = obstacleCost + DistCost + obstacleRoughCost + headingCost
+                    if(BestCost > Cost):
+                        BestCost = Cost
+                        Best = vLposible,vRposible
+                        self.friendBOT.target = (B.x,B.y)
+
+        self.friendBOT.vl, self.friendBOT.vr = Best
+
+    def predictPos(vL, vR, delta,friendBOT):
+        p = copy.copy(friendBOT)
+        p.vl=vL
+        p.vr=vR
+        p.move(delta)
+        return p
+
+    def obstRoughDistance(prediction : RoboT,friendBOT: RoboT,FieldObjects):
+        mindist = 100000
+        for FO in FieldObjects:
+            if (FO.x,FO.y) != (friendBOT.x,friendBOT.y):
+                x = prediction.toLocalSystem((FO.x,FO.y))
+                p = x
+                mindist = min(mindist,  (glm.length(p)-FO.radius-25))
+        return mindist
+    def obstDistance(prediction : RoboT,friendBOT: RoboT,FieldObjects):
+        mindist = 100000
+        for FO in FieldObjects:
+            if (FO.x,FO.y) != (friendBOT.x,friendBOT.y):
+                x = prediction.toLocalSystem((FO.x,FO.y))
+                x.x += 6-23.5/2
+                b = glm.vec2(23.5/2,35/2)
+                p = x
+                d = abs(p)-b
+                mindist = min(mindist,  (glm.length(glm.max(d,0)) + min(max(d.x,d.y),0.0))-FO.radius)
+        return mindist
+
 class Template_Controller(Controller):
     def Loop(self) -> None:
         Contemp = self.iface.get_random_state_space()
@@ -86,3 +209,15 @@ class Template_Controller(Controller):
     def SafeExit(self) -> None:
         print("No pls")
         return
+    
+def TargetCake()->vec2:
+    a : vec2
+    fieldObjects:list(tuple[float,float,float])
+    
+    base = vec2(0,18+6)
+    Samples = [a+glm.rotate(base,glm.radians(45*i)) for i in range(0,8)]
+    minDist = 1000000000
+    mini = None
+    for sample in Samples:
+        for fo in fieldObjects:
+            if(glm.length2(sample,(fo[0],fo[1])))>24**2 and glm.length2()
