@@ -153,7 +153,7 @@ class Traverse(Controller):
     def Loop(self) -> None:
         state = self.iface.get_state_space()
         self.obstacles = self.iface.get_obstacles()
-        self.friendBot.dmove(state)
+        self.friendBot.dmove(state[0]-24,-state[1],-state[2])
         Target : vec2 = self.GetTargetFunc(self.Args)
         self.ifaceAI.emit_new_lookahead(Target.x,Target.y)
         self.DWA(self.obstacles,Target)
@@ -269,14 +269,22 @@ class Template_Controller(Controller):
         print("No pls")
         return
     
-def TargetCake()->vec2:
-    a : vec2
-    fieldObjects:list(tuple[float,float,float])
-    
+def TargetCake(self:Traverse)->vec2:
+    a : vec2 = self.Args[0]
+    fieldObjects : list(tuple[float,float,float]) = self.Args[1]
+
     base = vec2(0,18+6)
     Samples = [a+glm.rotate(base,glm.radians(45*i)) for i in range(0,8)]
     minDist = 1000000000
     mini = None
     for sample in Samples:
+        Free  = True
         for fo in fieldObjects:
-            if(glm.length2(sample,(fo[0],fo[1])))>24**2 and glm.length2()
+            
+            if(glm.distance2(sample,(fo[0],fo[1])))<24**2:
+                Free=False
+        Dist = glm.distance2(sample, (self.friendBot.x,self.friendBot.y))
+        if Free and Dist<minDist:
+            minDist = Dist
+            mini = sample
+    return mini
