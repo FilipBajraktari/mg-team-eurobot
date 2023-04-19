@@ -10,6 +10,7 @@ import dbus.service
 import dbus.mainloop.glib
 
 from fastestrplidar import FastestRplidar
+import fastestrplidar
 
 
 # ODrive variables
@@ -47,7 +48,7 @@ def lidar_main(odometry_iface, estop_iface, lidar):
     robot_stop_moving = False
     while True:
         should_move = True
-        x_robot, y_robot, theta_robot = odometry_iface.get_state_space()
+        x_robot, y_robot, theta_robot, _, _ = odometry_iface.get_state_space()
         x_robot -= 24
         #x_robot, y_robot, theta_robot = 0, 0, 0
         result = lidar.get_scan_as_vectors(filter_quality=True)
@@ -70,7 +71,8 @@ def lidar_main(odometry_iface, estop_iface, lidar):
                             estop_iface.emit_emergency_stop()
                         should_move = False
                         robot_stop_moving = True
-                        print("Too close!")
+                        #print("Too close!")
+                    #print(x,y)
                     points.append((x,y))
 
             if robot_stop_moving and should_move:
@@ -84,11 +86,22 @@ class Lidar(dbus.service.Object):
     @dbus.service.method("com.mgrobotics.LidarInterface",
                          in_signature='i', out_signature='a(dd)')
     def opponents_coordinates(self, number_of_clusters=1):
+        print("Ja sam tupac sahkur i krenuo sam svoju rep karijeru")
         points_cpy = []
+
+        
         with lock:
-            points_cpy = points
+            print("Sad sam u zatvor")
+            if len(points) < number_of_clusters:
+                return points
+            else:
+                points_cpy = points
+
+        #with lock:
+        # points_cpy = points
 
         if points_cpy == []:
+            print("Sad sam van zatvora al nemam para")
             return points_cpy
         
         if number_of_clusters == 1:
@@ -98,6 +111,7 @@ class Lidar(dbus.service.Object):
                 x += point[0]
                 y += point[1]
             n = len(points_cpy)
+            print("Sad imam para jer ima tacaka")
             return [(x/n, y/n)]
         
         # Clusterization
@@ -114,6 +128,7 @@ class Lidar(dbus.service.Object):
 
         opponents = [(cluster[1]/cluster[0], cluster[2]/cluster[0]) 
                     for cluster in clusters]
+        print("ja sam sad mrtav cika jer sam bio dobio drajv baj ka-ka")
         return opponents
     
     @dbus.service.method("com.mgrobotics.LidarInterface",
@@ -134,11 +149,33 @@ if __name__ == "__main__":
     odometry_iface = dbus.Interface(remote_object, "com.mgrobotics.OdometryInterface")
     estop_iface = dbus.Interface(remote_object, "com.mgrobotics.EmergencyStop")
 
-
-    # Lidar initialization
+    
     lidar = FastestRplidar()
     lidar.connectlidar()
+    lidar.stopmotor()
+    lidar = FastestRplidar()
+    lidar.connectlidar()
+    lidar.stopmotor()
+    lidar = FastestRplidar()
+    print("Fast")
+    lidar.connectlidar()
+    lidar.stopmotor()
+    # Lidar initialization
+    print("pre")
+    lidar = FastestRplidar()
+    print("Fast")
+    lidar.connectlidar()
+    print("connect")
+    time.sleep(1)
+    print(lidar)
+    #lidar.startmotor(my_scanmode=2)
     lidar.startmotor(my_scanmode=2)
+    #result = lidar.fetchscandata()
+
+    #lidar.stopmotor
+    #print ("result - ")
+    #print (result)
+    #exit(1)
     print("Lidar successfully connected.")
 
 

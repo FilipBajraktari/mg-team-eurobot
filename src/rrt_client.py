@@ -13,9 +13,9 @@ import _rtrrt as rt
 import random
 
 # DESIRED POSITION COORDINATES
-waypoints = None
-x_desired = None
-y_desired = None
+waypoints = []
+x_desired = 0
+y_desired = 0
 theta_desired = None
 iface = None
 lidar_iface = None
@@ -26,10 +26,15 @@ lock = False
 
 def rrtSend():
     global lidar_iface, iface, lock
-    Obstacles = lidar_iface.opponents_coordinates(2)
-    Obstacles = [(O.x*10+xOffset-250,O.y*10+yOffset-250,200) for O in Obstacles]
-    while iface == None: 
+    while iface == None or lidar_iface == None: 
         time.sleep(0.1)
+    print("LLL") 
+    Obstacles = lidar_iface.opponents_coordinates(3)
+    #Obstacles = []
+    print(Obstacles)
+
+    Obstacles = [(max(0,A+xOffset-250),max(0,B+yOffset-250),200) for A,B in Obstacles]
+    
     ncords=iface.get_state_space()
     ncords[0]*=10
     ncords[0]+= xOffset-250
@@ -44,6 +49,8 @@ def rrtSend():
         x_d+= xOffset-250
         y_d = 10 * y_desired
         y_d+= yOffset-250
+    if len(Obstacles)>0:
+        print(Obstacles) 
     return (ncords[0], ncords[1], x_d,y_d,Obstacles,len(Obstacles))
 
 def rrtRecv(path,Tree):
@@ -52,10 +59,13 @@ def rrtRecv(path,Tree):
     #Map = Tree
     #friendBOT.lastWaypoint=0
 
+def rrtErr(e):
+    print(e)
+
 def rrt_star():
     time.sleep(2)
     print("started rrt")
-    rt.startRRT(rrtSend, rrtRecv)
+    rt.startRRT(rrtSend, rrtRecv, rrtErr)
 
 
 class RRT(dbus.service.Object):

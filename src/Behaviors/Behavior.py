@@ -27,6 +27,8 @@ class Controller(ABC):
     def __init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0) -> None:
         self.iface = iface
         self.ifaceAI = ifaceAI
+        self.ifaceRrt = ifaceRRT
+        self.ifaceLidar = ifaceLidar
         self.odrv0 = odrv0
 
     @abstractmethod
@@ -144,32 +146,39 @@ class MoveRelative(Controller):
         return
 
 class Traverse(Controller):
-    GetTargetFunc : function
-    Args : function
-    friendBot : RoboT
+    GetTargetFunc=None
+    Arg=None
+    friendBOT : RoboT
     Timeout = 90
 
-    def __init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0, args, GetTrargetFunc : function) -> None:
-        super().__init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0)
+    def __init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0, args, GetTrargetFunc) -> None:
+        super().__init__(iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0)
         self.GetTargetFunc = GetTrargetFunc
         self.Args = args
-        self.friendBot = RoboT((0,0),None,23.5)
-        self.ifaceRRT.SetDesiredPosition(-125.1,-75.1)
+        self.friendBOT = RoboT((0,0),None,23.5)
+        self.t = time.time()
+        #self.ifaceRrt.SetDesiredPosition((-125.1,-75.1))
 
     def Loop(self) -> None:
         state = self.iface.get_state_space()
-        self.obstacles = self.ifaceLidar.opponents_coordinates()
-        self.friendBot.dmove(state[0]-24, state[1], state[2])
+        #print(state[0],state[1],state[2])
+        self.obstacles = self.ifaceLidar.opponents_coordinates(3)
+        self.friendBOT.dmove(state[0]-24, state[1], state[2])
         Target : vec2 = self.GetTargetFunc(self)
-        self.ifaceRRT.SetDesiredPosition(Target.x,Target.y)
-        waypoints = self.ifaceRRT.GetWaypoints()
-        if round(waypoints[-1][0],3) != round(Target.x,3) or round(waypoints[-1][0], 3) != round(Target.y,3):
+        #print(Target)
+        self.ifaceRrt.SetDesiredPosition((Target.x,Target.y))
+        waypoints = self.ifaceRrt.GetWaypoints()
+        #print(self.friendBOT.x,self.friendBOT.y)
+        #print(self.friendBOT.vl,self.friendBOT.vr)
+        print("----")
+        if len(waypoints)<1 or  round(waypoints[-1][0],3) != round(Target.x,3) or round(waypoints[-1][1], 3) != round(Target.y,3):
             if self.Timeout>0:
                 self.Timeout-=1
                 return
             else:
                 self.Error = "Finding path to goal timed out"
                 self.Complete = True
+                self.SafeExit()
                 return
         self.Timeout = 90
         goal = None
@@ -180,15 +189,16 @@ class Traverse(Controller):
         if goal!=None and (glm.distance2(waypoints[-1],(self.friendBOT.x,self.friendBOT.y))<400):
             goal = waypoints[-1]
         if goal != None:
-            self.DWA(goal,waypoints[1%len(waypoints)])
+            self.DWA(self.obstacles, goal)
             self.odrv0.axis0.controller.input_vel = -self.friendBOT.vl/(8*numpy.pi)*6
             self.odrv0.axis1.controller.input_vel = self.friendBOT.vr/(8*numpy.pi)*6
         if glm.distance2(Target,(self.friendBOT.x,self.friendBOT.y))<10:
+            self.SafeExit()
             self.Complete = True
 
     def SafeExit(self) -> None:
-        self.odrv0.axis0.controller.input_value= 0
-        self.odrv0.axis1.controller.input_value= 0
+        self.odrv0.axis0.controller.input_vel= 0
+        self.odrv0.axis1.controller.input_vel= 0
     
     def DWA(self, FieldObjects, GoalPoint: glm.vec2):
         MaxSpeed=30
@@ -209,8 +219,10 @@ class Traverse(Controller):
         SAFEDISTANCE=15
         vL = self.friendBOT.vl
         vR = self.friendBOT.vr
-        dt = 0.1
-        Steps = 8
+        dt = time.time()-self.t
+        self.t = time.time()
+        Steps = 0.8/dt
+        print(dt)
         a = 2*MaxAcceleration/5
         vLposiblearray = [vL-MaxAcceleration*dt+a*dt*i for i in range(0,5)]
         vLposiblearray.append(vL)
@@ -257,31 +269,35 @@ class Traverse(Controller):
 
         self.friendBOT.vl, self.friendBOT.vr = Best
 
-    def predictPos(vL, vR, delta,friendBOT):
+    def predictPos(self,vL, vR, delta,friendBOT):
         p = copy.copy(friendBOT)
         p.vl=vL
         p.vr=vR
         p.move(delta)
         return p
 
-    def obstRoughDistance(prediction : RoboT,friendBOT: RoboT,FieldObjects):
+    def obstRoughDistance(self,prediction : RoboT,friendBOT: RoboT,FieldObjects):
         mindist = 100000
         for FO in FieldObjects:
+            xx,yy = FO
+            FO = glm.vec3(xx,yy,30)
             if (FO.x,FO.y) != (friendBOT.x,friendBOT.y):
                 x = prediction.toLocalSystem((FO.x,FO.y))
                 p = x
-                mindist = min(mindist,  (glm.length(p)-FO.radius-25))
+                mindist = min(mindist,  (glm.length(p)-FO.z-25))
         return mindist
-    def obstDistance(prediction : RoboT,friendBOT: RoboT,FieldObjects):
+    def obstDistance(self,prediction : RoboT,friendBOT: RoboT,FieldObjects):
         mindist = 100000
         for FO in FieldObjects:
+            xx,yy = FO
+            FO = glm.vec3(xx,yy,30)
             if (FO.x,FO.y) != (friendBOT.x,friendBOT.y):
                 x = prediction.toLocalSystem((FO.x,FO.y))
                 x.x += 6-23.5/2
                 b = glm.vec2(23.5/2,35/2)
                 p = x
                 d = abs(p)-b
-                mindist = min(mindist,  (glm.length(glm.max(d,0)) + min(max(d.x,d.y),0.0))-FO.radius)
+                mindist = min(mindist,  (glm.length(glm.max(d,0)) + min(max(d.x,d.y),0.0))-FO.z)
         return mindist
 
 class Template_Controller(Controller):
@@ -308,8 +324,14 @@ def TargetCake(self:Traverse)->vec2:
             
             if(glm.distance2(sample,(fo[0],fo[1])))<24**2:
                 Free=False
-        Dist = glm.distance2(sample, (self.friendBot.x,self.friendBot.y))
+        Dist = glm.distance2(sample, (self.friendBOT.x,self.friendBOT.y))
         if Free and Dist<minDist:
             minDist = Dist
             mini = sample
     return mini
+
+def TargetExact(self:Traverse)->vec2:
+    a : vec2 = self.Args
+    print(a)
+    return a
+

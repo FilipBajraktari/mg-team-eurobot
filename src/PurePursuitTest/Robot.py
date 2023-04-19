@@ -96,8 +96,6 @@ class RoboT:
         
         base = vec2(x0,y0)
         m = vec2(cm2p,-cm2p)
-        self.roatated=pygame.transform.rotozoom(self.img,math.degrees(self.theta),1)
-        self.rect = self.roatated.get_rect(center = base + m*vec2(self.x,self.y))
             
     def SetState(self, vl, vr):
         self.vl = vl

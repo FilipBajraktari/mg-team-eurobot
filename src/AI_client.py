@@ -35,7 +35,8 @@ def main():
     iface = dbus.Interface(remote_object, "com.mgrobotics.OdometryInterface")
     iface_ai = dbus.Interface(remote_object, "com.mgrobotics.AI")
     ifaceRrt = dbus.Interface(rrt_object, "com.mgrobotics.RrtInterface")
-    ifaceLidar = dbus.Interface(lidar_object, "com.mgrobotics.LidarService")
+    ifaceLidar = dbus.Interface(lidar_object, "com.mgrobotics.LidarInterface")
+    # ifaceLidar = None
 
     odrv0 = odrive.find_any()
 
@@ -46,15 +47,25 @@ def main():
     fill_the_stack = True
     while True:
         # AI STUFF
-        # current_state_space = iface.get_random_state_space()
-        # iface_ai.emit_new_desired_position([0,0,0])
+        #current_state_space = iface.get_random_state_space()
+        #iface_ai.emit_new_desired_position([0,0,0])
 
         if fill_the_stack:
             # behaviour = TurnRelative(iface, iface_ai, odrv0, 3*np.pi/2)
-            Args = (None)
-            Args[0] = vec2(1250,700)
-            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, Args, TargetCake)
+    
+            Args = vec2(82,35)
+            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, Args, TargetExact)
             action_queue.put(behaviour)
+            Args = vec2(-82,35)
+            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, Args, TargetExact)
+            action_queue.put(behaviour)
+            Args = vec2(82,-35)
+            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, Args, TargetExact)
+            action_queue.put(behaviour)
+            Args = vec2(-82,-35)
+            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, Args, TargetExact)
+            action_queue.put(behaviour)
+        
             fill_the_stack = False
         
         time.sleep(.1)

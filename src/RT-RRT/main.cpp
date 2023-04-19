@@ -602,6 +602,11 @@ static void
 readStateFromDbus()
 {
     PyObject *res=PyObject_CallObject(InfoMeth,NULL);
+    if(res == NULL)
+    {
+        PyErr_Print();
+        exit(-1);
+    }
     PyObject *obst;
     cPoint _Robot;
     cPoint _Goal;
@@ -614,7 +619,8 @@ readStateFromDbus()
     Py_INCREF(obst);
     ObstaclesC=_ObstaclesC;
     Blocked.clear();
-    for(int i=0;i<ObstaclesC;i++){
+    for(int i=0;i<ObstaclesC;i++)
+    {
         PyObject *o;
         o = PyList_GetItem(obst,i);
         Py_INCREF(o);
@@ -683,6 +689,7 @@ readStateFromDbus()
     Robot=_Robot;
     Goal=_Goal;
     Py_DECREF(obst);
+    Py_DECREF(res);
     PyErr_Print();
     return;
 }
@@ -926,7 +933,13 @@ updatePP()
         Py_DECREF(x);
     }
     PyObject *args = Py_BuildValue("OO",pl,pr);
-    PyObject_Call(PpMeth,args,NULL);
+    PyObject *res = PyObject_Call(PpMeth,args,NULL);
+    if(res == NULL)
+    {
+        PyErr_Print();
+        exit(-1);
+    }
+    Py_DECREF(res);
     Py_DECREF(args);
     Py_DECREF(pl);
     Py_DECREF(pr);
