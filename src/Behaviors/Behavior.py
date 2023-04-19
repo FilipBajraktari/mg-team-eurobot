@@ -13,16 +13,18 @@ INPUT_MODE_PASSTHROUGH = 1
 INPUT_MODE_VEL_RAMP    = 2
 
 class Controller(ABC):
-    iface    : dbus.Interface
-    ifaceAI  : dbus.Interface
-    odrv0    : object
-    Error    : str = None
-    Complete : bool = False
+    iface      : dbus.Interface
+    ifaceAI    : dbus.Interface
+    ifaceRrt   : dbus.Interface
+    ifaceLidar : dbus.Interface
+    odrv0      : object
+    Error      : str = None
+    Complete   : bool = False
 
     wheel_distance : float = 0.235
     wheel_radius   : float = 0.084
 
-    def __init__(self, iface, ifaceAI, odrv0) -> None:
+    def __init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0) -> None:
         self.iface = iface
         self.ifaceAI = ifaceAI
         self.odrv0 = odrv0
@@ -61,8 +63,8 @@ class TurnRelative(Controller):
 
     ERROR_MARGINE : float = 0.1
 
-    def __init__(self, iface, ifaceAI, odrv0, rel_pos) -> None:
-        super().__init__(iface, ifaceAI, odrv0)
+    def __init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0, rel_pos) -> None:
+        super().__init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0)
         self.rel_pos = rel_pos
 
     def Loop(self) -> None:
@@ -102,8 +104,8 @@ class MoveRelative(Controller):
     MAX_SPEED     : float = 0.5
     ERROR_MARGINE : float = 1
 
-    def __init__(self, iface, ifaceAI, odrv0, distance) -> None:
-        super().__init__(iface, ifaceAI, odrv0)
+    def __init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0, distance) -> None:
+        super().__init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0)
         self.distance = distance
 
     def Loop(self) -> None:
@@ -145,21 +147,44 @@ class Traverse(Controller):
     GetTargetFunc : function
     Args : function
     friendBot : RoboT
-    def __init__(self, iface, ifaceAI, odrv0, goal, args, GetTrargetFunc : function) -> None:
+    Timeout = 90
+
+    def __init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0, args, GetTrargetFunc : function) -> None:
+        super().__init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0)
         self.GetTargetFunc = GetTrargetFunc
         self.Args = args
         self.friendBot = RoboT((0,0),None,23.5)
-        self.goal = goal
+        self.ifaceRRT.SetDesiredPosition(-125.1,-75.1)
 
     def Loop(self) -> None:
         state = self.iface.get_state_space()
-        self.obstacles = self.iface.get_obstacles()
-        self.friendBot.dmove(state[0]-24,-state[1],-state[2])
-        Target : vec2 = self.GetTargetFunc(self.Args)
-        self.ifaceAI.emit_new_lookahead(Target.x,Target.y)
-        self.DWA(self.obstacles,Target)
-        self.odrv0.axis0.controller.input_value=  self.friendBOT.vl
-        self.odrv0.axis1.controller.input_value= -self.friendBOT.vr
+        self.obstacles = self.ifaceLidar.opponents_coordinates()
+        self.friendBot.dmove(state[0]-24, state[1], state[2])
+        Target : vec2 = self.GetTargetFunc(self)
+        self.ifaceRRT.SetDesiredPosition(Target.x,Target.y)
+        waypoints = self.ifaceRRT.GetWaypoints()
+        if round(waypoints[-1][0],3) != round(Target.x,3) or round(waypoints[-1][0], 3) != round(Target.y,3):
+            if self.Timeout>0:
+                self.Timeout-=1
+                return
+            else:
+                self.Error = "Finding path to goal timed out"
+                self.Complete = True
+                return
+        self.Timeout = 90
+        goal = None
+        for wa in waypoints:
+            goal = wa
+            if glm.distance2(wa,(self.friendBOT.x,self.friendBOT.y))>min(400,self.obstDistance(self.friendBOT,self.friendBOT,self.obstacles)**2):
+                break
+        if goal!=None and (glm.distance2(waypoints[-1],(self.friendBOT.x,self.friendBOT.y))<400):
+            goal = waypoints[-1]
+        if goal != None:
+            self.DWA(goal,waypoints[1%len(waypoints)])
+            self.odrv0.axis0.controller.input_vel = -self.friendBOT.vl/(8*numpy.pi)*6
+            self.odrv0.axis1.controller.input_vel = self.friendBOT.vr/(8*numpy.pi)*6
+        if glm.distance2(Target,(self.friendBOT.x,self.friendBOT.y))<10:
+            self.Complete = True
 
     def SafeExit(self) -> None:
         self.odrv0.axis0.controller.input_value= 0
@@ -272,8 +297,7 @@ class Template_Controller(Controller):
     
 def TargetCake(self:Traverse)->vec2:
     a : vec2 = self.Args[0]
-    fieldObjects : list(tuple[float,float,float]) = self.Args[1]
-
+    fieldObjects = self.obstacles
     base = vec2(0,18+6)
     Samples = [a+glm.rotate(base,glm.radians(45*i)) for i in range(0,8)]
     minDist = 1000000000

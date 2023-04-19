@@ -20,9 +20,9 @@ CLOSED_LOOP_CONTROL = 8
 lock = threading.Lock()
 
 def in_table(x, y):
-    WIDTH = 350
-    HEIGHT = 350
-    ERROR = 5
+    WIDTH = 3000
+    HEIGHT = 2000
+    ERROR = 50
 
     if -WIDTH//2 + ERROR < x and x < WIDTH//2 - ERROR:
         if -HEIGHT//2 + ERROR < y and y < HEIGHT//2 - ERROR:
@@ -47,8 +47,9 @@ def lidar_main(odometry_iface, estop_iface, lidar):
     robot_stop_moving = False
     while True:
         should_move = True
-        x_robot, y_robot, theta_robot = odometry_iface.get_random_state_space()
-        x_robot, y_robot, theta_robot = 0, 0, 0
+        x_robot, y_robot, theta_robot = odometry_iface.get_state_space()
+        x_robot -= 24
+        #x_robot, y_robot, theta_robot = 0, 0, 0
         result = lidar.get_scan_as_vectors(filter_quality=True)
 
         with lock:

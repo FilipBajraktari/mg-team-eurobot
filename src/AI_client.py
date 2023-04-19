@@ -8,10 +8,10 @@ import dbus
 import dbus.service
 import dbus.mainloop.glib
 
+from gi.repository import GLib
+
 from Behaviors.Behavior import *
 
-iface = None
-iface_ai = None
 CancelRequired = False
 
 def Master(action_queue):
@@ -22,15 +22,20 @@ def Master(action_queue):
             behaviour.ControlLoop(CancelRequired)
         if behaviour.Error:
             print(behaviour.Error)
+        print("Action is FINISHED ;)")
 
 def main():
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     bus = dbus.SessionBus()
  
-    remote_object = bus.get_object("com.mgrobotics.Service",
-                                   "/StateSpace")
+    remote_object = bus.get_object("com.mgrobotics.Service","/StateSpace")
+    rrt_object = bus.get_object("com.mgrobotics.RrtService", "/rtRRT")
+    lidar_object = bus.get_object("com.mgrobotics.LidarService", "/Lidar")
+
     iface = dbus.Interface(remote_object, "com.mgrobotics.OdometryInterface")
     iface_ai = dbus.Interface(remote_object, "com.mgrobotics.AI")
+    ifaceRrt = dbus.Interface(rrt_object, "com.mgrobotics.RrtInterface")
+    ifaceLidar = dbus.Interface(lidar_object, "com.mgrobotics.LidarService")
 
     odrv0 = odrive.find_any()
 
@@ -46,7 +51,9 @@ def main():
 
         if fill_the_stack:
             # behaviour = TurnRelative(iface, iface_ai, odrv0, 3*np.pi/2)
-            behaviour = MoveRelative(iface, iface_ai, odrv0, -10)
+            Args = (None)
+            Args[0] = vec2(1250,700)
+            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, Args, TargetCake)
             action_queue.put(behaviour)
             fill_the_stack = False
         

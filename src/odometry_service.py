@@ -50,7 +50,7 @@ class StateSpace(dbus.service.Object):
         pass
 
     @dbus.service.method('com.mgrobotics.AI',
-                         in_signature='ad', out_signature='s')
+                         in_signature='ad', out_signature='(a(dd)i)')
     def emit_new_desired_position(self, desired_position):
         self.new_desired_position(desired_position)
         return 'AI signal emitted'
