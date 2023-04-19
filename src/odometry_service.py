@@ -67,6 +67,15 @@ class StateSpace(dbus.service.Object):
         self.new_lookahead(lookahead)
         return 'Pure Pursuit signal emitted'
 
+    @dbus.service.signal('com.mgrobotics.EmergencyStop')
+    def emergency_stop(self):
+        pass
+
+    @dbus.service.method('com.mgrobotics.EmergencyStop',
+                         in_signature='', out_signature='s')
+    def emit_emergency_stop(self):
+        self.emergency_stop()
+        return 'Lidar Emergency Stop'
 
     @dbus.service.method("com.mgrobotics.OdometryInterface",
                          in_signature='', out_signature='')
