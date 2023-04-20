@@ -26,7 +26,7 @@ def Master(action_queue):
     while True:
         behaviour = action_queue.get()
         while not behaviour.Complete:
-            print(estop)
+            #print(estop)
             behaviour.ControlLoop((CancelRequired or estop))
         if behaviour.Error:
             print(behaviour.Error)
@@ -61,9 +61,20 @@ def main():
 
         if fill_the_stack:
             # behaviour = TurnRelative(iface, iface_ai, odrv0, 3*np.pi/2)
-            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0)
+            behaviour = Start(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0)
             action_queue.put(behaviour)
-            
+            Args = vec2(82,35)
+            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, Args, TargetExact)
+            action_queue.put(behaviour)
+            Args = vec2(-82,35)
+            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, Args, TargetExact)
+            action_queue.put(behaviour)
+            Args = vec2(82,-35)
+            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, Args, TargetExact)
+            action_queue.put(behaviour)
+            Args = vec2(-82,-35)
+            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, Args, TargetExact)
+            action_queue.put(behaviour)
         
             fill_the_stack = False
         

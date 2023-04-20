@@ -104,11 +104,11 @@ class Start(Controller):
     def __init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0) -> None:
         super().__init__(iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0)
         GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(10, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+        GPIO.setup(16, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
     def Loop(self) -> None:
         
-        if GPIO.input(10) == GPIO.LOW:
+        if GPIO.input(16) == GPIO.LOW:
             self.Complete=True
             self.SafeExit()
         return
@@ -172,12 +172,14 @@ class Traverse(Controller):
         self.GetTargetFunc = GetTrargetFunc
         self.Args = args
         self.friendBOT = RoboT((0,0),None,23.5)
-        self.t = time.time()
+        self.t = None
 
     def Loop(self) -> None:
+        if not self.t:
+            self.t=time.time()
         state = self.iface.get_state_space()
         self.obstacles = [vec2(x)/10 for x in self.ifaceLidar.opponents_coordinates(1)]
-        print(self.obstacles)
+        #print(self.obstacles)
         self.friendBOT.dmove(state[0]-24, state[1], state[2])
         Target : vec2 = self.GetTargetFunc(self)
         self.ifaceRrt.SetDesiredPosition((Target.x,Target.y))
@@ -212,9 +214,9 @@ class Traverse(Controller):
         self.odrv0.axis1.controller.input_vel= 0
     
     def DWA(self, FieldObjects, GoalPoint: glm.vec2):
-        MaxSpeed=30
+        MaxSpeed=40
         MaxTheta=numpy.deg2rad(40)
-        MaxAcceleration=50
+        MaxAcceleration=40
         
         GoalMultiplier=8
         
@@ -231,9 +233,10 @@ class Traverse(Controller):
         vL = self.friendBOT.vl
         vR = self.friendBOT.vr
         dt = time.time()-self.t
+        print(time.time()-self.t)
         self.t = time.time()
         Steps = 0.8/dt
-        print(dt)
+        
         a = 2*MaxAcceleration/5
         vLposiblearray = [vL-MaxAcceleration*dt+a*dt*i for i in range(0,5)]
         vLposiblearray.append(vL)
@@ -291,7 +294,7 @@ class Traverse(Controller):
         mindist = 100000
         for FO in FieldObjects:
             xx,yy = FO
-            FO = glm.vec3(xx,yy,20)
+            FO = glm.vec3(xx,yy,25)
             if (FO.x,FO.y) != (friendBOT.x,friendBOT.y):
                 x = prediction.toLocalSystem((FO.x,FO.y))
                 p = x
@@ -301,7 +304,7 @@ class Traverse(Controller):
         mindist = 100000
         for FO in FieldObjects:
             xx,yy = FO
-            FO = glm.vec3(xx,yy,20)
+            FO = glm.vec3(xx,yy,25)
             if (FO.x,FO.y) != (friendBOT.x,friendBOT.y):
                 x = prediction.toLocalSystem((FO.x,FO.y))
                 x.x += 6-23.5/2
