@@ -29,7 +29,7 @@ def rrtSend():
     while iface == None or lidar_iface == None: 
         time.sleep(0.1)
     #print("LLL") 
-    Obstacles = lidar_iface.opponents_coordinates(3)
+    Obstacles = lidar_iface.opponents_coordinates(1)
     #Obstacles = []
     #print(Obstacles)
 

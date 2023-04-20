@@ -162,7 +162,7 @@ class Traverse(Controller):
     def Loop(self) -> None:
         state = self.iface.get_state_space()
         #print(state[0],state[1],state[2])
-        self.obstacles = self.ifaceLidar.opponents_coordinates(3)
+        self.obstacles = self.ifaceLidar.opponents_coordinates(1)
         self.friendBOT.dmove(state[0]-24, state[1], state[2])
         Target : vec2 = self.GetTargetFunc(self)
         #print(Target)
