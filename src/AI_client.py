@@ -12,6 +12,13 @@ from gi.repository import GLib
 
 from Behaviors.Behavior import *
 
+# EMERGENCY STOP
+estop = False
+
+def catchall_estop():
+    global estop
+    estop = not estop
+
 CancelRequired = False
 
 def Master(action_queue):
@@ -19,7 +26,8 @@ def Master(action_queue):
     while True:
         behaviour = action_queue.get()
         while not behaviour.Complete:
-            behaviour.ControlLoop(CancelRequired)
+            print(estop)
+            behaviour.ControlLoop((CancelRequired or estop))
         if behaviour.Error:
             print(behaviour.Error)
         print("Action is FINISHED ;)")
@@ -28,15 +36,16 @@ def main():
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     bus = dbus.SessionBus()
  
-    remote_object = bus.get_object("com.mgrobotics.Service","/StateSpace")
-    rrt_object = bus.get_object("com.mgrobotics.RrtService", "/rtRRT")
+    remote_object = bus.get_object("com.mgrobotics.Service", "/StateSpace")
     lidar_object = bus.get_object("com.mgrobotics.LidarService", "/Lidar")
+    rrt_object = bus.get_object("com.mgrobotics.RrtService", "/rtRRT")
 
     iface = dbus.Interface(remote_object, "com.mgrobotics.OdometryInterface")
     iface_ai = dbus.Interface(remote_object, "com.mgrobotics.AI")
     ifaceRrt = dbus.Interface(rrt_object, "com.mgrobotics.RrtInterface")
     ifaceLidar = dbus.Interface(lidar_object, "com.mgrobotics.LidarInterface")
-    # ifaceLidar = None
+
+    bus.add_signal_receiver(catchall_estop, dbus_interface = "com.mgrobotics.EmergencyStop")
 
     odrv0 = odrive.find_any()
 

@@ -30,7 +30,7 @@ def pure_pursuit(iface, lidar_iface):
         # print("Lookahead position:\t", x_lookahead, y_lookahead, theta_lookahead, sep=" ")
         # print(type(iface.get_random_state_space()[0]))
 
-        # print(estop)
+        print(estop)
         #print(lidar_iface.opponents_coordinates(3))
         time.sleep(.1)
 
