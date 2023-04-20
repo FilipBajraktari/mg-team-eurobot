@@ -14,6 +14,8 @@ import fastestrplidar
 import multiprocessing as mp
 from multiprocessing import Queue
 import queue
+from functools import cmp_to_key
+import glm
 
 # ODrive variables
 IDLE = 1
@@ -74,6 +76,8 @@ def lidar_main(Q:mp.Queue,q1:Queue,q2:Queue):
         
         print(x_robot, y_robot, theta_robot)
         x_robot -= 24
+        x_robot *= 10
+        y_robot *= 10
         #x_robot, y_robot, theta_robot = 0, 0, 0
         result = lidar.get_scan_as_vectors(filter_quality=True)
 
@@ -99,7 +103,7 @@ def lidar_main(Q:mp.Queue,q1:Queue,q2:Queue):
                 #print(x,y)
                 points.append((x,y))
         try:
-            Q.put(points)
+            Q.put(glm.vec2(x_robot,y_robot),points)
         except queue.Full:
             print("ffull")
 
@@ -108,9 +112,13 @@ def lidar_main(Q:mp.Queue,q1:Queue,q2:Queue):
             robot_stop_moving = False
             print("I got away!!!")
         time.sleep(.1)
+def Quad(p):
+    quad = ((0,3),(1,2))
+    return quad[1 if p[0]>=0 else 0][1 if p[1]>=0 else 0]
 
 def comparePol(x:tuple,y:tuple):
-    return False      
+    
+    return x[0] * y[1] > x[1] * y[0] if Quad(x) == Quad(y) else Quad(x)<Quad(y)
 
 class Lidar(dbus.service.Object):
 
@@ -123,7 +131,7 @@ class Lidar(dbus.service.Object):
         points = []
         while True:
             try:
-                points = self.Q.get_nowait()
+                rob,points = self.Q.get_nowait()
             except queue.Empty:
                 break
         points_cpy = []
@@ -149,7 +157,23 @@ class Lidar(dbus.service.Object):
                 y += point[1]
             n = len(points_cpy)
             return [(x/n, y/n)]
-        
+        sorted(points_cpy , key=cmp_to_key(lambda x,y:comparePol(glm.vec2(x) - rob,glm.vec2(y) - rob)))
+        prev=points_cpy[0]
+        t = glm.vec2(0)
+        n = 0
+        op = []
+        for point in points:
+            if glm.distance2(prev,point) < 100**2:
+                n+=1
+                t+=glm.vec2(point)
+            else:
+                op.append((t/n).to_tuple)
+                n = 1
+                t = glm.vec2(point)
+            prev = point
+        if n>0:
+            op.append(t/n)
+        return op
         # Clusterization
         kmeans = KMeans(n_clusters=number_of_clusters)
         kmeans.fit(points_cpy)

@@ -162,7 +162,7 @@ class Traverse(Controller):
     def Loop(self) -> None:
         state = self.iface.get_state_space()
         #print(state[0],state[1],state[2])
-        self.obstacles = self.ifaceLidar.opponents_coordinates(1)
+        self.obstacles = [vec2(x)/10 for x in self.ifaceLidar.opponents_coordinates(1)]
         self.friendBOT.dmove(state[0]-24, state[1], state[2])
         Target : vec2 = self.GetTargetFunc(self)
         #print(Target)
@@ -280,7 +280,7 @@ class Traverse(Controller):
         mindist = 100000
         for FO in FieldObjects:
             xx,yy = FO
-            FO = glm.vec3(xx,yy,30)
+            FO = glm.vec3(xx,yy,20)
             if (FO.x,FO.y) != (friendBOT.x,friendBOT.y):
                 x = prediction.toLocalSystem((FO.x,FO.y))
                 p = x
@@ -290,7 +290,7 @@ class Traverse(Controller):
         mindist = 100000
         for FO in FieldObjects:
             xx,yy = FO
-            FO = glm.vec3(xx,yy,30)
+            FO = glm.vec3(xx,yy,20)
             if (FO.x,FO.y) != (friendBOT.x,friendBOT.y):
                 x = prediction.toLocalSystem((FO.x,FO.y))
                 x.x += 6-23.5/2
