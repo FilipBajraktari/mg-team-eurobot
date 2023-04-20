@@ -8,6 +8,7 @@ import copy
 import time
 import numpy as np
 import RPi.GPIO as GPIO
+import serial
 
 # ODrive variables
 INPUT_MODE_PASSTHROUGH = 1
@@ -59,6 +60,36 @@ class Controller(ABC):
         self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
         self.odrv0.axis1.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
 
+class CommandCakeThing(Controller):
+    ser : serial.Serial
+    t = -1
+    p =""
+    strc:str
+    sec
+
+    def __init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0, ser, strc,sec) -> None:
+        super().__init__(iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0)
+        self.ser = ser
+        self.strc = strc
+        self.sec = sec
+
+    def Loop(self) -> None:
+        if (self.t == -1):
+            self.t = time.time()
+            self.ser.write(bytearray(self.strc, 'ascii'))
+        if time.time()-self.t>0.1:
+            if self.ser.in_waiting():
+                p+=self.ser.read().decode('ascii')
+            else:
+                print(p)
+        if time.time() >= self.sec:
+            self.Complete = True
+        return
+    
+    def SafeExit(self) -> None:
+        time.sleep(0.1)
+        print("Stopped due to canceling behaviour.")
+        return
 class TurnRelative(Controller):
     rel_pos : float
     goal    : float = None
