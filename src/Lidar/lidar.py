@@ -11,14 +11,17 @@ import dbus.mainloop.glib
 
 from fastestrplidar import FastestRplidar
 import fastestrplidar
-
+import multiprocessing as mp
+from multiprocessing import Queue
+import queue
 
 # ODrive variables
 IDLE = 1
 CLOSED_LOOP_CONTROL = 8
 
+
 # Create a Lock
-lock = threading.Lock()
+
 
 def in_table(x, y):
     WIDTH = 3000
@@ -31,15 +34,25 @@ def in_table(x, y):
     return False
 
 def in_collision_circle(x_robot, y_robot, x, y, COLLISION_RANGE = 200):
-    return np.sqrt(np.square(x-x_robot) + np.square(y-y_robot)) <= COLLISION_RANGE
+    return np.square(x-x_robot) + np.square(y-y_robot) <= COLLISION_RANGE**2
 
 def in_collision_FOV(angle, distance, OPENING_ANGLE = np.pi/4, COLLISION_RANGE = 200):
     return (angle<=OPENING_ANGLE or 2*np.pi-angle<=OPENING_ANGLE) and distance<=COLLISION_RANGE
 
 points = []
-def lidar_main(odometry_iface, estop_iface, lidar):
+def lidar_main(odometry_iface, estop_iface,Q:mp.Queue):
     time.sleep(0.5) # Time to setup Glib mainloop
+    
+    lidar = FastestRplidar()
+    lidar.connectlidar()
+    lidar.startmotor(my_scanmode=2)
+    #result = lidar.fetchscandata()
 
+    #lidar.stopmotor
+    #print ("result - ")
+    #print (result)
+    #exit(1)
+    print("Lidar successfully connected.")
     # Connect to ODrive
     # my_drive = odrive.find_any()
     my_drive = None
@@ -47,13 +60,14 @@ def lidar_main(odometry_iface, estop_iface, lidar):
     
     robot_stop_moving = False
     while True:
-        should_move = True
-        x_robot, y_robot, theta_robot, _, _ = odometry_iface.get_state_space()
-        x_robot -= 24
-        #x_robot, y_robot, theta_robot = 0, 0, 0
-        result = lidar.get_scan_as_vectors(filter_quality=True)
+        try:
+            should_move = True
+            x_robot, y_robot, theta_robot, _, _ = odometry_iface.get_state_space()
+            x_robot -= 24
+            #x_robot, y_robot, theta_robot = 0, 0, 0
+            result = lidar.get_scan_as_vectors(filter_quality=True)
 
-        with lock:
+            
             global points
             points = []
             for angle, distance, quality in result:
@@ -74,34 +88,44 @@ def lidar_main(odometry_iface, estop_iface, lidar):
                         #print("Too close!")
                     #print(x,y)
                     points.append((x,y))
+            Q.put_nowait(points)
 
             if robot_stop_moving and should_move:
                 estop_iface.emit_emergency_stop()
                 robot_stop_moving = False
                 print("I got away!!!")
-        time.sleep(.1)
+            time.sleep(.1)
+            
+        except KeyboardInterrupt:
+            lidar.stopmotor()
 
 class Lidar(dbus.service.Object):
+
+    Q : Queue = Queue()
 
     @dbus.service.method("com.mgrobotics.LidarInterface",
                          in_signature='i', out_signature='a(dd)')
     def opponents_coordinates(self, number_of_clusters=1):
-        #print("Ja sam tupac sahkur i krenuo sam svoju rep karijeru")
+        
+        points = []
+        while True:
+            try:
+                points = self.Q.get_nowait()
+            except queue.Empty:
+                break
         points_cpy = []
 
         
-        with lock:
-            #print("Sad sam u zatvor")
-            if len(points) < number_of_clusters:
-                return points
-            else:
-                points_cpy = points
 
-        #with lock:
-        # points_cpy = points
+        
+        if len(points) < number_of_clusters:
+            return points
+        else:
+            points_cpy = points
+
+        
 
         if points_cpy == []:
-            #print("Sad sam van zatvora al nemam para")
             return points_cpy
         
         if number_of_clusters == 1:
@@ -111,7 +135,6 @@ class Lidar(dbus.service.Object):
                 x += point[0]
                 y += point[1]
             n = len(points_cpy)
-            #print("Sad imam para jer ima tacaka")
             return [(x/n, y/n)]
         
         # Clusterization
@@ -119,16 +142,16 @@ class Lidar(dbus.service.Object):
         kmeans.fit(points_cpy)
         labels = kmeans.labels_
 
-        # (number_of_points_in_cluster, sum_of_x, sum_of_y)
         clusters = [[0, 0, 0] for i in range(number_of_clusters)]
-        for i, label in enumerate(labels):
+        for x,point in zip(enumerate(labels),points_cpy):
+            i, label = x 
             clusters[label][0] += 1
-            clusters[label][1] += points_cpy[i][0]
-            clusters[label][2] += points_cpy[i][1]
+            clusters[label][1] += point[0]
+            clusters[label][2] += point[1]
 
         opponents = [(cluster[1]/cluster[0], cluster[2]/cluster[0]) 
                     for cluster in clusters]
-        #print("ja sam sad mrtav cika jer sam bio dobio drajv baj ka-ka")
+        
         return opponents
     
     @dbus.service.method("com.mgrobotics.LidarInterface",
@@ -162,21 +185,14 @@ if __name__ == "__main__":
     #lidar.stopmotor()
     ## Lidar initialization
     #print("pre")
-    lidar = FastestRplidar()
-    lidar.connectlidar()
-    lidar.startmotor(my_scanmode=2)
-    #result = lidar.fetchscandata()
-
-    #lidar.stopmotor
-    #print ("result - ")
-    #print (result)
-    #exit(1)
-    print("Lidar successfully connected.")
+    
 
 
     # Define a thread that will concurrently run with mainloop
     # This thread will handle Lidar
-    t = threading.Thread(target=lidar_main, args=(odometry_iface, estop_iface, lidar))
+    
+    mp.set_start_method("fork")
+    t = mp.Process(target=lidar_main, args=(odometry_iface, estop_iface,lidar_dbus.Q))
     t.daemon = True
     t.start()
 
@@ -186,5 +202,4 @@ if __name__ == "__main__":
         print("Running lidar.")
         mainloop.run()
     except KeyboardInterrupt:
-        lidar.stopmotor()
         lidar_dbus.exit()
