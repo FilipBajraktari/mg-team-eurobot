@@ -73,11 +73,15 @@ def lidar_main(Q:mp.Queue,q1:Queue,q2:Queue):
                 _robot, y_robot, theta_robot, _, _  = q1.get_nowait()
             except queue.Empty:
                 break
+    
+        #print(x_robot, y_robot, theta_robot)
         
-        print(x_robot, y_robot, theta_robot)
         x_robot -= 24
         x_robot *= 10
         y_robot *= 10
+        a = glm.rotate((60,0),theta_robot)
+        x_robot+=a.x
+        y_robot+=a.y
         #x_robot, y_robot, theta_robot = 0, 0, 0
         result = lidar.get_scan_as_vectors(filter_quality=True)
 
@@ -86,6 +90,8 @@ def lidar_main(Q:mp.Queue,q1:Queue,q2:Queue):
         points = []
         for angle, distance, quality in result:
             angle = np.radians(angle) - 3*np.pi/4
+            #distance+= 40
+        
             if angle < 0: 
                 angle += 2*np.pi
             x_lidar, y_lidar = distance*np.cos(angle), -distance*np.sin(angle)
@@ -103,7 +109,7 @@ def lidar_main(Q:mp.Queue,q1:Queue,q2:Queue):
                 #print(x,y)
                 points.append((x,y))
         try:
-            Q.put(glm.vec2(x_robot,y_robot),points)
+            Q.put((glm.vec2(x_robot,y_robot),points))
         except queue.Full:
             print("ffull")
 
@@ -120,6 +126,9 @@ def comparePol(x:tuple,y:tuple):
     
     return x[0] * y[1] > x[1] * y[0] if Quad(x) == Quad(y) else Quad(x)<Quad(y)
 
+rob : glm.vec2
+points : list[glm.vec2] = []
+
 class Lidar(dbus.service.Object):
 
     Q : Queue = Queue()
@@ -127,8 +136,8 @@ class Lidar(dbus.service.Object):
     @dbus.service.method("com.mgrobotics.LidarInterface",
                          in_signature='i', out_signature='a(dd)')
     def opponents_coordinates(self, number_of_clusters=1):
+        global rob,points
         
-        points = []
         while True:
             try:
                 rob,points = self.Q.get_nowait()
@@ -139,17 +148,10 @@ class Lidar(dbus.service.Object):
         
 
         
-        if len(points) < number_of_clusters:
-            return points
-        else:
-            points_cpy = points
-
         
-
-        if points_cpy == []:
-            return points_cpy
+        points_cpy = points
         
-        if number_of_clusters == 1:
+        if number_of_clusters == 1 and False:
             x = 0
             y = 0
             for point in points_cpy:
@@ -157,7 +159,10 @@ class Lidar(dbus.service.Object):
                 y += point[1]
             n = len(points_cpy)
             return [(x/n, y/n)]
-        sorted(points_cpy , key=cmp_to_key(lambda x,y:comparePol(glm.vec2(x) - rob,glm.vec2(y) - rob)))
+        if(len(points)<1):
+            print("help")
+            return []
+        sorted(points, key=cmp_to_key(lambda x,y:comparePol(glm.vec2(x) - rob,glm.vec2(y) - rob)))
         prev=points_cpy[0]
         t = glm.vec2(0)
         n = 0
@@ -167,12 +172,13 @@ class Lidar(dbus.service.Object):
                 n+=1
                 t+=glm.vec2(point)
             else:
-                op.append((t/n).to_tuple)
+                op.append((t/n).to_tuple())
                 n = 1
                 t = glm.vec2(point)
             prev = point
         if n>0:
-            op.append(t/n)
+            op.append((t/n).to_tuple())
+        #print(op)
         return op
         # Clusterization
         kmeans = KMeans(n_clusters=number_of_clusters)

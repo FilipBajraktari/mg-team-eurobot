@@ -61,19 +61,9 @@ def main():
 
         if fill_the_stack:
             # behaviour = TurnRelative(iface, iface_ai, odrv0, 3*np.pi/2)
-    
-            Args = vec2(82,35)
-            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, Args, TargetExact)
+            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0)
             action_queue.put(behaviour)
-            Args = vec2(-82,35)
-            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, Args, TargetExact)
-            action_queue.put(behaviour)
-            Args = vec2(82,-35)
-            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, Args, TargetExact)
-            action_queue.put(behaviour)
-            Args = vec2(-82,-35)
-            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, Args, TargetExact)
-            action_queue.put(behaviour)
+            
         
             fill_the_stack = False
         

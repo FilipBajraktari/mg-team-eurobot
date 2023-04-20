@@ -7,6 +7,7 @@ import numpy
 import copy
 import time
 import numpy as np
+import RPi.GPIO as GPIO
 
 # ODrive variables
 INPUT_MODE_PASSTHROUGH = 1
@@ -66,7 +67,7 @@ class TurnRelative(Controller):
     ERROR_MARGINE : float = 0.1
 
     def __init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0, rel_pos) -> None:
-        super().__init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0)
+        super().__init__(iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0)
         self.rel_pos = rel_pos
 
     def Loop(self) -> None:
@@ -98,6 +99,24 @@ class TurnRelative(Controller):
         print("Stopped due to canceling behaviour.")
         return
 
+class Start(Controller):
+    
+    def __init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0) -> None:
+        super().__init__(iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0)
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(10, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+
+    def Loop(self) -> None:
+        
+        if GPIO.input(10) == GPIO.LOW:
+            self.Complete=True
+            self.SafeExit()
+        return
+    
+    def SafeExit(self) -> None:
+        print("Started run")
+        return
+
 class MoveRelative(Controller):
     distance : float
     goal     : float = None
@@ -122,10 +141,7 @@ class MoveRelative(Controller):
 
         # Check if the goal is reached
         e = np.sqrt(np.square(self.goal[0]-x) + np.square(self.goal[1]-y))
-        # print(self.goal)
-        # print(x, y)
-        # print(e)
-        # print("----------------------")
+       
         if np.abs(e) < self.ERROR_MARGINE:
             self.stop()
             self.Complete = True
@@ -157,20 +173,15 @@ class Traverse(Controller):
         self.Args = args
         self.friendBOT = RoboT((0,0),None,23.5)
         self.t = time.time()
-        #self.ifaceRrt.SetDesiredPosition((-125.1,-75.1))
 
     def Loop(self) -> None:
         state = self.iface.get_state_space()
-        #print(state[0],state[1],state[2])
         self.obstacles = [vec2(x)/10 for x in self.ifaceLidar.opponents_coordinates(1)]
+        print(self.obstacles)
         self.friendBOT.dmove(state[0]-24, state[1], state[2])
         Target : vec2 = self.GetTargetFunc(self)
-        #print(Target)
         self.ifaceRrt.SetDesiredPosition((Target.x,Target.y))
         waypoints = self.ifaceRrt.GetWaypoints()
-        #print(self.friendBOT.x,self.friendBOT.y)
-        #print(self.friendBOT.vl,self.friendBOT.vr)
-        #print("----")
         if len(waypoints)<1 or  round(waypoints[-1][0],3) != round(Target.x,3) or round(waypoints[-1][1], 3) != round(Target.y,3):
             if self.Timeout>0:
                 self.Timeout-=1
@@ -204,13 +215,13 @@ class Traverse(Controller):
         MaxSpeed=30
         MaxTheta=numpy.deg2rad(40)
         MaxAcceleration=50
-        #MaxTurnAcceleration=numpy.deg2rad(90)
+        
         GoalMultiplier=8
         
         ObstacleMultiplier = 6666
         ObstacleRoughMultiplier = 1900
         ObstDistMultiplier = 900
-        #TargetVel = 12 * gm.length(gm.vec2(friendBOT.x,friendBOT.y)-GoalPoint)
+        
         VelocityMultiplier=0
         p = self.friendBOT.toLocalSystem(GoalPoint)
         heading =glm.atan(p.y, p.x)
@@ -332,6 +343,5 @@ def TargetCake(self:Traverse)->vec2:
 
 def TargetExact(self:Traverse)->vec2:
     a : vec2 = self.Args
-    #print(a)
     return a
 
