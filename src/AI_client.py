@@ -55,7 +55,7 @@ def GetSerialConnection():
     for x in portList:
         if portList.find("ttyUSB") < 0:
             continue
-        if portList.find("Serial bus")<0:
+        if portList.find("Serial")<0:
             continue    
         portVar = portList
 
