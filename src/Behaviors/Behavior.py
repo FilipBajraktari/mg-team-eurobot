@@ -205,6 +205,7 @@ class Traverse(Controller):
         self.Args = args
         self.friendBOT = RoboT((0,0),None,23.5)
         self.t = None
+        self.ifaceRrt.SetDesiredPosition((-125.1,-75.1))
 
     def Loop(self) -> None:
         if not self.t:

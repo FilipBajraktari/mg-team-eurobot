@@ -19,12 +19,13 @@ HOMOLOGATION = False
 estop = False
 done = 0
 def catchall_estop():
-    global estop,done
+    global estop
     estop = not estop
 
 CancelRequired = False
 
 def Master(action_queue):
+    global done
     print("Master started working.")
     while True:
         behaviour = action_queue.get()
@@ -119,41 +120,45 @@ def main():
             behaviour = Start(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0)
             action_queue.put(behaviour)
             if HOMOLOGATION:
+                behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"ch 2",1)
+                action_queue.put(behaviour)
                 Args = vec2(150-26,100-26)
                 behaviour = Traverse ()
                 Args = vec2(-150+112,-100+72)
-                behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,Args,TargetCake)
+                behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,Args,TargetExact)
                 action_queue.put(behaviour)
             else:
-                behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, 41)
+                behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"ch 2",1)
+                action_queue.put(behaviour)
+                behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, 39)
                 
                 action_queue.put(behaviour)
                 behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"pu 2",4)
                 action_queue.put(behaviour)
                 
-                behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, 18)
+                behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, 20)
                 action_queue.put(behaviour)
 
                 behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"pu 1",4)
                 action_queue.put(behaviour)
                 
                 behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"dr 1",4)
-                action_queue.put(behaviour)
+                #action_queue.put(behaviour)
 
                 behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"dr 2",4)
-                action_queue.put(behaviour)
-                Args = vec2(-150+112,-100+72)
+                #action_queue.put(behaviour)
+                Args = vec2(-150+112.5,-100+72.5)
                 behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,Args,TargetCake)
                 action_queue.put(behaviour)
                 fill_the_stack = False
-        if done == 1:
+        if done == 8:
             if not HOMOLOGATION:
-                cake = vec2(-150+112,-100+72)
-                xro,yro,thetaro,_,_ = iface.self.iface.get_state_space()
+                cake = vec2(-150+112.5,-100+72.5)
+                xro,yro,thetaro,_,_ = iface.get_state_space()
                 ro = vec2(xro,yro)
                 robo = RoboT(ro,None,27)
                 cakeoff = robo.toLocalSystem(cake)
-                ta = glm.atan(cakeoff)
+                ta = glm.atan(cakeoff.y,cakeoff.x)
                 behaviour = TurnRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ta)
                 action_queue.put(behaviour)
                 movd = glm.length(cakeoff)

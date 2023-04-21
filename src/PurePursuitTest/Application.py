@@ -17,8 +17,8 @@ Implementation : 1. * Add map, make some sort of graphics for each of the elemen
 ## Variables ##
 WINDOW_SIZE = (1200,800)
 
-LOCALTESTING = False
-NO_ODOMETRY = False
+LOCALTESTING = True
+NO_ODOMETRY = True
 
 ## Imports ##   
 import tarfile
@@ -231,7 +231,7 @@ def pure_pursuit(iface):
     WAYPOINTS = 5
     ROBOT = 6
 
-    
+    fBgoal = (-125.1,-75.1)
 
     state = PAUSED
     lasttime=0
