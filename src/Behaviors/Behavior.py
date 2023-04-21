@@ -344,7 +344,7 @@ class Traverse(Controller):
                 p = x
                 d = abs(p)-b
                 mindist = min(mindist,  (glm.length(glm.max(d,0)) + min(max(d.x,d.y),0.0))-FO.z)
-        DEBUG = False
+        DEBUG = True
         if DEBUG:
             fb = vec2(friendBOT.x,friendBOT.y)
             bx = [(-6,-17.5), (23.5-6,-17.5), (-6,17.5),(23.5-6,17.5)]

@@ -14,7 +14,7 @@ from Behaviors.Behavior import *
 
 # EMERGENCY STOP
 
-HOMOLOGATION = False
+HOMOLOGATION = True
 
 estop = False
 done = 0
@@ -31,7 +31,7 @@ def Master(action_queue):
         behaviour = action_queue.get()
         while not behaviour.Complete:
             #print(estop)
-            behaviour.ControlLoop((CancelRequired))
+            behaviour.ControlLoop((CancelRequired or estop))
         if behaviour.Error:
             print(behaviour.Error)
         print("Action is FINISHED ;)")
