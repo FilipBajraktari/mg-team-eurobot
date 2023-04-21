@@ -43,6 +43,7 @@ class Controller(ABC):
     def ControlLoop(self, CancelRequired : bool) -> None:
         if CancelRequired:
             self.SafeExit()
+            self.Complete=True
         else:
             self.Loop()
 
@@ -152,8 +153,12 @@ class MoveRelative(Controller):
     distance : float
     goal     : float = None
     K_p      : float = 0.01
+    direc :float
+    sped : float
+    t : float
 
-    MAX_SPEED     : float = 0.5
+    MAX_SPEED     : float = 0.1
+    MAX_ACEL      : float = 0.1
     ERROR_MARGINE : float = 1
 
     def __init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0, distance) -> None:
@@ -167,8 +172,11 @@ class MoveRelative(Controller):
         if self.goal == None:
             self.goal = (x + self.distance*np.cos(theta),
                          y + self.distance*np.sin(theta))
-            self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_VEL_RAMP
-            self.odrv0.axis1.controller.config.input_mode = INPUT_MODE_VEL_RAMP
+            self.t = time.time()
+            self.sped = 0
+            
+            #self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_VEL_RAMP
+            #self.odrv0.axis1.controller.config.input_mode = INPUT_MODE_VEL_RAMP
         print(self.goal)
         print(x,y,theta)
         # Check if the goal is reached
@@ -182,9 +190,10 @@ class MoveRelative(Controller):
         # Calculate velocity using PID
         velocity = np.sign(self.distance)*self.K_p*e
         # velocity = np.minimum(velocity, self.MAX_SPEED)
-
+        self.sped = np.sign(self.distance) * min(abs(self.sped)+self.MAX_ACEL*(min(time.time()-self.t,0.1)),min(self.MAX_SPEED,abs(velocity)))
+        self.t=time.time()
         # Set velocity
-        self.move(velocity)
+        self.move(self.sped)
 
         return
     
@@ -197,7 +206,7 @@ class Traverse(Controller):
     GetTargetFunc=None
     Arg=None
     friendBOT : RoboT
-    Timeout = 90
+    Timeout = 270
 
     def __init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0, args, GetTrargetFunc) -> None:
         super().__init__(iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0)
@@ -246,7 +255,7 @@ class Traverse(Controller):
         self.odrv0.axis0.controller.input_vel= 0
         self.odrv0.axis1.controller.input_vel= 0
     def DWA(self, FieldObjects, GoalPoint: glm.vec2):
-        MaxSpeed=40
+        MaxSpeed=30
         MaxTheta=numpy.deg2rad(40)
         MaxAcceleration=40
         
@@ -265,7 +274,7 @@ class Traverse(Controller):
         vL = self.friendBOT.vl
         vR = self.friendBOT.vr
         dt = time.time()-self.t
-        print(time.time()-self.t)
+        #print(time.time()-self.t)
         self.t = time.time()
         Steps = 0.8/dt
         
@@ -352,7 +361,7 @@ class Traverse(Controller):
             for p in bx:
                 b = (1500,1000)
                 d = abs(p) - b 
-                mindist = min(mindist,  (glm.length(glm.max(d,0)) + min(max(d.x,d.y),0.0)))
+                mindist = min(mindist,  -(glm.length(glm.max(d,0)) + min(max(d.x,d.y),0.0)))
         return mindist
 
 class Template_Controller(Controller):

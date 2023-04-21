@@ -17,8 +17,8 @@ Implementation : 1. * Add map, make some sort of graphics for each of the elemen
 ## Variables ##
 WINDOW_SIZE = (1200,800)
 
-LOCALTESTING = True
-NO_ODOMETRY = True
+LOCALTESTING = False
+NO_ODOMETRY = False
 
 ## Imports ##   
 import tarfile

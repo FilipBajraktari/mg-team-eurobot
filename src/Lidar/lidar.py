@@ -38,7 +38,7 @@ def in_table(x, y):
 def in_collision_circle(x_robot, y_robot, x, y, COLLISION_RANGE = 200):
     return np.square(x-x_robot) + np.square(y-y_robot) <= COLLISION_RANGE**2
 
-def in_collision_FOV(angle, distance, OPENING_ANGLE = np.pi/4, COLLISION_RANGE = 200):
+def in_collision_FOV(angle, distance, OPENING_ANGLE = np.pi/4, COLLISION_RANGE = 300):
     return (angle<=OPENING_ANGLE or 2*np.pi-angle<=OPENING_ANGLE) and distance<=COLLISION_RANGE
 
 points = []
@@ -102,10 +102,10 @@ def lidar_main(Q:mp.Queue,q1:Queue,q2:Queue):
                 # if in_collision_circle(x_robot, y_robot, x, y):
                 if in_collision_FOV(angle, distance):
                     if not robot_stop_moving:
-                        q2.put(None)
+                        q2.put(False)
                     should_move = False
                     robot_stop_moving = True
-                    #print("Too close!")
+                    print("Too close!")
                 #print(x,y)
                 points.append((x,y))
         try:
@@ -114,7 +114,7 @@ def lidar_main(Q:mp.Queue,q1:Queue,q2:Queue):
             print("ffull")
 
         if robot_stop_moving and should_move:
-            q2.put(None)
+            q2.put(False)
             robot_stop_moving = False
             print("I got away!!!")
         time.sleep(.1)
@@ -210,6 +210,8 @@ def SendToProcess(Q2,q,odiface,estop_iface):
                 try:
                     points = q.get_nowait()
                     estop_iface.emit_emergency_stop()
+
+                    print("stop/start")
                 except queue.Empty:
                     break
         time.sleep(0.1)
