@@ -14,9 +14,9 @@ from Behaviors.Behavior import *
 
 # EMERGENCY STOP
 estop = False
-
+done = 0
 def catchall_estop():
-    global estop
+    global estop,done
     estop = not estop
 
 CancelRequired = False
@@ -31,6 +31,7 @@ def Master(action_queue):
         if behaviour.Error:
             print(behaviour.Error)
         print("Action is FINISHED ;)")
+        done += 1
 def GetSerialConnection():
     import serial
     import serial.tools.list_ports
@@ -50,24 +51,37 @@ def GetSerialConnection():
 
     #val = input("select port: /dev/ttyUSB")
     val = 0
-
+    portVar = None
 
     for x in portList:
-        if portList.find("ttyUSB") < 0:
+        if x.find("ttyUSB") < 0:
             continue
-        if portList.find("Serial")<0:
-            continue    
-        portVar = portList
+        if x.find("Serial")<0:
+            continue 
+        portVar = x.split()[0]
 
-
+    
     ser.baudrate = 115200
     ser.port = portVar
     ser.open()
+    while True:
+        command = input("Type in a command: ")
+        if(command == "close"):
+            break
+        ser.write(bytearray(command, 'ascii'))
+        time.sleep(0.1)
+        if ser.inWaiting():
+            s = ""
+            while ser.inWaiting():
+                s += ser.read().decode('ascii')
+            print(s)
     return ser
 
 
-def main():
 
+def main(): 
+    global done
+    ser = GetSerialConnection()
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     bus = dbus.SessionBus()
  
@@ -89,7 +103,7 @@ def main():
     worker.daemon = True
     worker.start()
     fill_the_stack = True
-    ser = GetSerialConnection()
+    
     while True:
         # AI STUFF
         #current_state_space = iface.get_random_state_space()
@@ -97,26 +111,34 @@ def main():
 
         if fill_the_stack:
             # behaviour = TurnRelative(iface, iface_ai, odrv0, 3*np.pi/2)
-            behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, ser, "pu 1", 1)
-            action_queue.put(behaviour)
+            #behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, ser, "pu 1", 1)
+            #action_queue.put(behaviour)
             behaviour = Start(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0)
             action_queue.put(behaviour)
-            Args = vec2(82,35)
-            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, Args, TargetExact)
+            behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, 41)
+            
             action_queue.put(behaviour)
-            behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, ser, "en 0", .2)
+            behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"pu 2",4)
             action_queue.put(behaviour)
-            Args = vec2(-82,35)
-            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, Args, TargetExact)
+            
+            behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, 18)
             action_queue.put(behaviour)
-            Args = vec2(82,-35)
-            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, Args, TargetExact)
+
+            behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"pu 1",4)
             action_queue.put(behaviour)
-            Args = vec2(-82,-35)
-            behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, Args, TargetExact)
+            
+            behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"dr 1",4)
             action_queue.put(behaviour)
-        
+
+            behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"dr 2",4)
+            action_queue.put(behaviour)
+            Args = vec2(-150+112,-100+72)
+            behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,Args,TargetCake)
+            action_queue.put(behaviour)
             fill_the_stack = False
+        if done == 1:
+            cake = vec2(-150+112,-100+72)
+            #a,b,c,_,_
         
         time.sleep(.1)
         

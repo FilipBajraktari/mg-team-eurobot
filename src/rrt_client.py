@@ -33,7 +33,7 @@ def rrtSend():
     #Obstacles = []
     #print(Obstacles)
 
-    Obstacles = [(max(0,A+xOffset-250),max(0,B+yOffset-250),250) for A,B in Obstacles]
+    Obstacles = [(A+xOffset-250,B+yOffset-250,280) for A,B in Obstacles]
     
     ncords=iface.get_state_space()
     ncords[0]*=10

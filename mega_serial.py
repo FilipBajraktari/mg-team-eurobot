@@ -16,8 +16,8 @@ for p in ports:
     print(str(p))
 
 
-#val = input("select port: /dev/ttyUSB")
-val = 1
+val = input("select port: /dev/ttyUSB")
+#val = 1
 
 for x in range(0, len(portList)):
     if portList[x].startswith("/dev/ttyUSB" + str(val)):

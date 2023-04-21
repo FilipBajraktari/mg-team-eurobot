@@ -29,11 +29,18 @@ class StateSpace(dbus.service.Object):
                          in_signature='', out_signature='ad')
     def get_state_space(self):
         ser.write(bytearray('S', 'ascii'))
+        t = time.time()
         while True:
             if ser.inWaiting():
                 s = ser.readline().decode('utf').rstrip('\n')
-                print(s)
-                return [float(item) for item in s.split()]
+                
+                a = [float(item) for item in s.split()]
+                a[0] -= 150-9-24
+                a[1] -= 100-17.5
+                print(a)
+                return a
+            elif time.time()-t>0.1:
+                return (0,0,0,0,0)
     
     @dbus.service.method("com.mgrobotics.OdometryInterface", 
                          in_signature='', out_signature='ad')

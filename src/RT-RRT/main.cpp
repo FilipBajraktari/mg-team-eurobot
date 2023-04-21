@@ -486,8 +486,9 @@ getGridLoc(cPoint x, int &i, int&j)
     
     i = x.x/((AREAX+10)/GRID_X);
     j = x.y/((AREAY+10)/GRID_Y);
-    i = min(i,GRID_X-1);
-    j = min(i,GRID_Y-1);
+    i = max(min(i,GRID_X-1),0);
+    j = max(min(i,GRID_Y-1),0);
+
 }
 static void
 initVariables()
@@ -528,7 +529,9 @@ planPath()
             return;
         } else
         {
+            GoalPathLength=1;
             GoalBlocked=true;
+            return;
         }
     }
     

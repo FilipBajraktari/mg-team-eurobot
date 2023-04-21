@@ -65,7 +65,7 @@ class CommandCakeThing(Controller):
     t = -1
     p =""
     strc:str
-    sec
+    sec = 2
 
     def __init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0, ser, strc,sec) -> None:
         super().__init__(iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0)
@@ -78,11 +78,11 @@ class CommandCakeThing(Controller):
             self.t = time.time()
             self.ser.write(bytearray(self.strc, 'ascii'))
         if time.time()-self.t>0.1:
-            if self.ser.in_waiting():
-                p+=self.ser.read().decode('ascii')
+            if self.ser.inWaiting():
+                self.p+=self.ser.read().decode('ascii')
             else:
-                print(p)
-        if time.time() >= self.sec:
+                print(self.p)
+        if time.time() - self.t>= self.sec:
             self.Complete = True
         return
     
@@ -157,7 +157,7 @@ class MoveRelative(Controller):
     ERROR_MARGINE : float = 1
 
     def __init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0, distance) -> None:
-        super().__init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0)
+        super().__init__(iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0)
         self.distance = distance
 
     def Loop(self) -> None:
@@ -169,7 +169,8 @@ class MoveRelative(Controller):
                          y + self.distance*np.sin(theta))
             self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_VEL_RAMP
             self.odrv0.axis1.controller.config.input_mode = INPUT_MODE_VEL_RAMP
-
+        print(self.goal)
+        print(x,y,theta)
         # Check if the goal is reached
         e = np.sqrt(np.square(self.goal[0]-x) + np.square(self.goal[1]-y))
        
@@ -243,7 +244,6 @@ class Traverse(Controller):
     def SafeExit(self) -> None:
         self.odrv0.axis0.controller.input_vel= 0
         self.odrv0.axis1.controller.input_vel= 0
-    
     def DWA(self, FieldObjects, GoalPoint: glm.vec2):
         MaxSpeed=40
         MaxTheta=numpy.deg2rad(40)
@@ -325,7 +325,7 @@ class Traverse(Controller):
         mindist = 100000
         for FO in FieldObjects:
             xx,yy = FO
-            FO = glm.vec3(xx,yy,25)
+            FO = glm.vec3(xx,yy,28)
             if (FO.x,FO.y) != (friendBOT.x,friendBOT.y):
                 x = prediction.toLocalSystem((FO.x,FO.y))
                 p = x
@@ -335,7 +335,7 @@ class Traverse(Controller):
         mindist = 100000
         for FO in FieldObjects:
             xx,yy = FO
-            FO = glm.vec3(xx,yy,25)
+            FO = glm.vec3(xx,yy,28)
             if (FO.x,FO.y) != (friendBOT.x,friendBOT.y):
                 x = prediction.toLocalSystem((FO.x,FO.y))
                 x.x += 6-23.5/2
@@ -359,7 +359,7 @@ class Template_Controller(Controller):
 def TargetCake(self:Traverse)->vec2:
     a : vec2 = self.Args[0]
     fieldObjects = self.obstacles
-    base = vec2(0,18+6)
+    base = vec2(0,25+6)
     Samples = [a+glm.rotate(base,glm.radians(45*i)) for i in range(0,8)]
     minDist = 1000000000
     mini = None
