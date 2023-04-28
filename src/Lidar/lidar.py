@@ -50,74 +50,76 @@ def lidar_main(Q:mp.Queue,q1:Queue,q2:Queue):
     lidar = FastestRplidar()
     lidar.connectlidar()
     lidar.startmotor(my_scanmode=2)
-    
-    #result = lidar.fetchscandata()
+    try:
+        #result = lidar.fetchscandata()
 
-    #lidar.stopmotor
-    #print ("result - ")
-    #print (result)
-    #exit(1)
-    print("Lidar successfully connected.")
-    # Connect to ODrive
-    # my_drive = odrive.find_any()
-    my_drive = None
-    print("ODrive successfully connected.")
-    
-    robot_stop_moving = False
-    while True:
-    
-        should_move = True
-        x_robot, y_robot, theta_robot, _, _ = q1.get()
+        #lidar.stopmotor
+        #print ("result - ")
+        #print (result)
+        #exit(1)
+        print("Lidar successfully connected.")
+        # Connect to ODrive
+        # my_drive = odrive.find_any()
+        my_drive = None
+        print("ODrive successfully connected.")
+        
+        robot_stop_moving = False
         while True:
+        
+            should_move = True
+            x_robot, y_robot, theta_robot, _, _ = q1.get()
+            while True:
+                try:
+                    _robot, y_robot, theta_robot, _, _  = q1.get_nowait()
+                except queue.Empty:
+                    break
+        
+            #print(x_robot, y_robot, theta_robot)
+            
+            
+            x_robot *= 10
+            y_robot *= 10
+            a = glm.rotate((60,0),theta_robot)
+            x_robot+=a.x
+            y_robot+=a.y
+            #x_robot, y_robot, theta_robot = 0, 0, 0
+            result = lidar.get_scan_as_vectors(filter_quality=True)
+
+            
+            global points
+            points = []
+            for angle, distance, quality in result:
+                angle = np.radians(angle) - 3*np.pi/4
+                #distance+= 40
+            
+                if angle < 0: 
+                    angle += 2*np.pi
+                x_lidar, y_lidar = distance*np.cos(angle), -distance*np.sin(angle)
+                x_prime = x_lidar*np.cos(theta_robot) - y_lidar*np.sin(theta_robot)
+                y_prime = x_lidar*np.sin(theta_robot) + y_lidar*np.cos(theta_robot)
+                x, y = x_robot + x_prime, y_robot + y_prime
+                if in_table(x, y):
+                    # if in_collision_circle(x_robot, y_robot, x, y):
+                    if in_collision_FOV(angle, distance):
+                        if not robot_stop_moving:
+                            q2.put(False)
+                        should_move = False
+                        robot_stop_moving = True
+                        print("Too close!")
+                    #print(x,y)
+                    points.append((x,y))
             try:
-                _robot, y_robot, theta_robot, _, _  = q1.get_nowait()
-            except queue.Empty:
-                break
-    
-        #print(x_robot, y_robot, theta_robot)
-        
-        x_robot -= 24
-        x_robot *= 10
-        y_robot *= 10
-        a = glm.rotate((60,0),theta_robot)
-        x_robot+=a.x
-        y_robot+=a.y
-        #x_robot, y_robot, theta_robot = 0, 0, 0
-        result = lidar.get_scan_as_vectors(filter_quality=True)
+                Q.put((glm.vec2(x_robot,y_robot),points))
+            except queue.Full:
+                print("ffull")
 
-        
-        global points
-        points = []
-        for angle, distance, quality in result:
-            angle = np.radians(angle) - 3*np.pi/4
-            #distance+= 40
-        
-            if angle < 0: 
-                angle += 2*np.pi
-            x_lidar, y_lidar = distance*np.cos(angle), -distance*np.sin(angle)
-            x_prime = x_lidar*np.cos(theta_robot) - y_lidar*np.sin(theta_robot)
-            y_prime = x_lidar*np.sin(theta_robot) + y_lidar*np.cos(theta_robot)
-            x, y = x_robot + x_prime, y_robot + y_prime
-            if in_table(x, y):
-                # if in_collision_circle(x_robot, y_robot, x, y):
-                if in_collision_FOV(angle, distance):
-                    if not robot_stop_moving:
-                        q2.put(False)
-                    should_move = False
-                    robot_stop_moving = True
-                    print("Too close!")
-                #print(x,y)
-                points.append((x,y))
-        try:
-            Q.put((glm.vec2(x_robot,y_robot),points))
-        except queue.Full:
-            print("ffull")
-
-        if robot_stop_moving and should_move:
-            q2.put(False)
-            robot_stop_moving = False
-            print("I got away!!!")
-        time.sleep(.1)
+            if robot_stop_moving and should_move:
+                q2.put(False)
+                robot_stop_moving = False
+                print("I got away!!!")
+            time.sleep(.1)
+    except KeyboardInterrupt:
+        lidar.stopmotor()
 def Quad(p):
     quad = ((0,3),(1,2))
     return quad[1 if p[0]>=0 else 0][1 if p[1]>=0 else 0]

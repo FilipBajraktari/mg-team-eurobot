@@ -276,7 +276,7 @@ def pure_pursuit(iface):
                     my_drive.axis0.controller.input_vel = -friendBOT.vl/(8*numpy.pi)*6
                     my_drive.axis1.controller.input_vel = friendBOT.vr/(8*numpy.pi)*6
                     #print(f1-time.time())
-                friendBOT.dmove(ncords[0]-24, ncords[1], ncords[2])
+                friendBOT.dmove(ncords[0], ncords[1], ncords[2])
             
         print(1/dt)
 
@@ -284,7 +284,7 @@ def pure_pursuit(iface):
 def rrtSend():
     Obstacles = [(x.x * 10-250+1500,x.y * 10-250+1000,x.radius * 10) for x in FieldObjects if x!=friendBOT]
     if friendBOT == None: 
-        return(1500-250-240,1000-250, fBgoal[0]*10+1500-250,fBgoal[1]*10+1000-250,[],0)
+        return(1500-250,1000-250, fBgoal[0]*10+1500-250,fBgoal[1]*10+1000-250,[],0)
     return(friendBOT.x*10-250+1500,friendBOT.y*10-250+1000, fBgoal[0]*10-250+1500,fBgoal[1]*10-250+1000,Obstacles,len(Obstacles))
 
 def rrtRecv(path,Tree):

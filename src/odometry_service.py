@@ -35,8 +35,8 @@ class StateSpace(dbus.service.Object):
                 s = ser.readline().decode('utf').rstrip('\n')
                 
                 a = [float(item) for item in s.split()]
-                a[0] -= 150-9-24
-                a[1] -= (100-17.5)
+                a[0] -= 150-9
+                a[1] -= (100-17.5-5)
                 print(a)
                 return a
             elif time.time()-t>0.1:

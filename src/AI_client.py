@@ -15,7 +15,6 @@ from Behaviors.Behavior import *
 # EMERGENCY STOP
 
 HOMOLOGATION = False
-
 estop = False
 done = 0
 def catchall_estop():
@@ -36,7 +35,10 @@ def Master(action_queue:Queue):
         behaviour = action_queue.get()
         while not behaviour.Complete:
             #print(estop)
-            behaviour.ControlLoop((CancelRequired or estop or Timeout))
+            if not estop:
+                behaviour.ControlLoop((CancelRequired or estop or Timeout))
+            if estop:
+                behaviour.SafeExit()
         if behaviour.Error:
             print(behaviour.Error)
         print("Action is FINISHED ;)")
@@ -123,17 +125,17 @@ def main():
             if HOMOLOGATION:
                 #behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"ch 2",1)
                 #action_queue.put(behaviour)
-                Args = vec2(150-26,100-26)
+                Args = vec2(150-26,-100+26)
                 #behaviour = Traverse ()
-                behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, 130)
-                action_queue.put(behaviour)
+                behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, 50)
+                #action_queue.put(behaviour)
 
                 Args = vec2(-0+15,-60)
                 behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,Args,TargetExact)
                 #action_queue.put(behaviour)
 
-                behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, -130)
-                action_queue.put(behaviour)
+                behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, -50)
+                #action_queue.put(behaviour)
 
                 Args = vec2(35-150,35-100)
                 behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,Args,TargetExact)
@@ -142,64 +144,105 @@ def main():
                 Args = vec2(-0+15,-60)
                 behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,Args,TargetExact)
                 #action_queue.put(behaviour)
+                behaviour = TurnRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,0.2*2*np.pi)
+                action_queue.put(behaviour)
             else:
-                behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"ch 2",1)
+                behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"ch 2",0.5)
                 action_queue.put(behaviour)
-                behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, 39)
-                
+
+                behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"jg 3 280",0.1)
                 action_queue.put(behaviour)
-                behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"pu 0",5)
+
+                behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, 37)        
+                action_queue.put(behaviour)
+
+                behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"pu 0",3)
                 action_queue.put(behaviour)
                 
                 
                 behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, 20)
                 action_queue.put(behaviour)
 
-                behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"pu 2",4)
+                behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"pu 1",3)
                 action_queue.put(behaviour)
                 
-                behaviour = TurnRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, glm.pi())
-                action_queue.put(behaviour)
 
-                behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, 40)
-                action_queue.put(behaviour)
+                #behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"dr 2",4)
+                #action_queue.put(behaviour)
 
-                behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"dr 2",4)
-                action_queue.put(behaviour)
-
-                
-
-                behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, -20)
-                action_queue.put(behaviour)
+                #behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"ch 1",5)
+                #action_queue.put(behaviour)
 
 
-                behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"dr 0",5)
-                action_queue.put(behaviour)
 
-                
+                #behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"dr 0",5)
+                #action_queue.put(behaviour)
 
-                behaviour = TurnRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, glm.pi())
-                action_queue.put(behaviour)
+                #behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"ch 1",5)
+                #action_queue.put(behaviour)
+
+
+                #behaviour = TurnRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0, glm.pi())
+                #action_queue.put(behaviour)
 
                 
                 Args = vec2(-150+112.5,-100+72.5)
-                Args = vec2(-0+15,-60)
+                #Args = vec2(-0+15,-60)
                 Args.y = Args.y
-                behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,Args,TargetExact)
+                behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,Args,TargetCake)
                 action_queue.put(behaviour)
             fill_the_stack = False
-        if done == -1:
+        if done == 8:
             if not HOMOLOGATION:
-                cake = vec2(-150+112.5,(-100+72.5))
+                done+=1
+                cake = vec2(-150+112.5, -100+72.5)
                 xro,yro,thetaro,_,_ = iface.get_state_space()
                 ro = vec2(xro,yro)
                 robo = RoboT(ro,None,27)
+                robo.theta = thetaro
+
                 cakeoff = robo.toLocalSystem(cake)
-                ta = glm.atan(cakeoff.y,cakeoff.x)
+                ta = np.arctan2(cakeoff.y,cakeoff.x)
+                print(cake)
+                print(ro)
+                print(cakeoff)
+                print(ta/np.pi/2*360)
                 behaviour = TurnRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ta)
                 action_queue.put(behaviour)
                 movd = glm.length(cakeoff)
-                behaviour = TurnRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,movd)
+                behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,movd)
+                action_queue.put(behaviour)
+                behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"pu 2",4)
+                action_queue.put(behaviour)
+                Args = vec2(-150+45,-100+40)
+                Args.y = Args.y
+                behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,Args,TargetExact)
+                action_queue.put(behaviour)
+                behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"dr 2",3)
+                action_queue.put(behaviour)
+                behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"ch 1",4)
+                action_queue.put(behaviour)
+                behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,13)
+                action_queue.put(behaviour)
+                behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,-13)
+                action_queue.put(behaviour)
+                behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"dr 1",4)
+                action_queue.put(behaviour)
+                behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"ch 1",4)
+                action_queue.put(behaviour)
+                behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,13)
+                action_queue.put(behaviour)
+                behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,-13)
+                action_queue.put(behaviour)
+                behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"dr 0",4)
+                action_queue.put(behaviour)
+                behaviour = CommandCakeThing(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,ser,"ch 1",5)
+                action_queue.put(behaviour)
+                behaviour = MoveRelative(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,-13)
+                action_queue.put(behaviour)
+                Args = vec2(-150+165,-100+30)
+                Args.y = Args.y
+                behaviour = Traverse(iface, iface_ai,ifaceRrt,ifaceLidar, odrv0,Args,TargetExact)
                 action_queue.put(behaviour)
             #a,b,c,_,_
         

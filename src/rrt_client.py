@@ -51,7 +51,7 @@ def rrtSend():
         y_d+= yOffset-250
     #if len(Obstacles)>0:
         #print(Obstacles) 
-    return (ncords[0], ncords[1], x_d,y_d,Obstacles,len(Obstacles))
+    return (min(max(ncords[0],0),2500), min(max(ncords[1],0),1500), x_d,y_d,Obstacles,len(Obstacles))
 
 def rrtRecv(path,Tree):
     global waypoints

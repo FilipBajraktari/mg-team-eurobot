@@ -75,12 +75,15 @@ class CommandCakeThing(Controller):
         self.sec = sec
 
     def Loop(self) -> None:
+
+        #self.Complete = True
+        #return
         if (self.t == -1):
             self.t = time.time()
             self.ser.write(bytearray(self.strc, 'ascii'))
         if time.time()-self.t>0.1:
             if self.ser.inWaiting():
-                self.p+=self.ser.read().decode('ascii')
+                self.ser.read()
             else:
                 print(self.p)
         if time.time() - self.t>= self.sec:
@@ -94,7 +97,7 @@ class CommandCakeThing(Controller):
 class TurnRelative(Controller):
     rel_pos : float
     goal    : float = None
-    K_p     : float = 0.5
+    K_p     : float = 0.7
 
     ERROR_MARGINE : float = 0.1
 
@@ -152,14 +155,15 @@ class Start(Controller):
 class MoveRelative(Controller):
     distance : float
     goal     : float = None
-    K_p      : float = 0.01
+    K_p      : float = 0.02
     direc :float
     sped : float
     t : float
 
-    MAX_SPEED     : float = 0.1
-    MAX_ACEL      : float = 0.1
-    ERROR_MARGINE : float = 1
+    MAX_SPEED     : float = 0.3
+    MAX_ACEL      : float = 0.2
+    ERROR_MARGINE : float = 1 
+    startpos = None
 
     def __init__(self, iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0, distance) -> None:
         super().__init__(iface, ifaceAI, ifaceRRT, ifaceLidar, odrv0)
@@ -174,15 +178,17 @@ class MoveRelative(Controller):
                          y + self.distance*np.sin(theta))
             self.t = time.time()
             self.sped = 0
+            self.startpos=vec2(x,y)
+            return
             
             #self.odrv0.axis0.controller.config.input_mode = INPUT_MODE_VEL_RAMP
             #self.odrv0.axis1.controller.config.input_mode = INPUT_MODE_VEL_RAMP
-        print(self.goal)
-        print(x,y,theta)
+        #print(self.goal)
+        #print(x,y,theta)
         # Check if the goal is reached
         e = np.sqrt(np.square(self.goal[0]-x) + np.square(self.goal[1]-y))
        
-        if np.abs(e) < self.ERROR_MARGINE:
+        if glm.distance2(self.startpos,(x,y)) > self.distance**2:
             self.stop()
             self.Complete = True
             return
@@ -222,7 +228,7 @@ class Traverse(Controller):
         state = self.iface.get_state_space()
         self.obstacles = [vec2(x)/10 for x in self.ifaceLidar.opponents_coordinates(1)]
         #print(self.obstacles)
-        self.friendBOT.dmove(state[0]-24, state[1], state[2])
+        self.friendBOT.dmove(state[0], state[1], state[2])
         Target : vec2 = self.GetTargetFunc(self)
         self.ifaceRrt.SetDesiredPosition((Target.x,Target.y))
         waypoints = self.ifaceRrt.GetWaypoints()
@@ -250,6 +256,7 @@ class Traverse(Controller):
         if glm.distance2(Target,(self.friendBOT.x,self.friendBOT.y))<10:
             self.SafeExit()
             self.Complete = True
+        print(goal)
 
     def SafeExit(self) -> None:
         self.odrv0.axis0.controller.input_vel= 0
@@ -309,7 +316,7 @@ class Traverse(Controller):
                     DistCost = GoalMultiplier * DistImprovement
                     headingCost = headingImprovment * HeadingMultiplier
                     
-                    if(obstacleDist < max(1,2*max(abs(vLposible),abs(vRposible))/MaxAcceleration)):
+                    if(obstacleDist < max(1,(vLposible+vRposible))/MaxAcceleration):
                         obstacleRoughCost = ObstacleRoughMultiplier*max(1-obstacleRoughDist,(max(abs(vLposible),abs(vRposible))/MaxAcceleration-obstacleRoughDist))
                         obstacleCost = ObstacleMultiplier*max(1-obstacleRoughDist,(max(abs(vLposible),abs(vRposible))/MaxAcceleration-obstacleDist))
                     else:
@@ -340,7 +347,14 @@ class Traverse(Controller):
                 x = prediction.toLocalSystem((FO.x,FO.y))
                 p = x
                 mindist = min(mindist,  (glm.length(p)-FO.z-25))
+        DEBUG = True
+        if DEBUG:
+            fb = vec2(prediction.x,prediction.y)
+            
+            a = (1500,1000) - abs(fb)-25
+            mindist = min(mindist,  min(a.x,a.y))
         return mindist
+        
     def obstDistance(self,prediction : RoboT,friendBOT: RoboT,FieldObjects):
         mindist = 100000
         for FO in FieldObjects:
@@ -355,7 +369,7 @@ class Traverse(Controller):
                 mindist = min(mindist,  (glm.length(glm.max(d,0)) + min(max(d.x,d.y),0.0))-FO.z)
         DEBUG = True
         if DEBUG:
-            fb = vec2(friendBOT.x,friendBOT.y)
+            fb = vec2(prediction.x,prediction.y)
             bx = [(-6,-17.5), (23.5-6,-17.5), (-6,17.5),(23.5-6,17.5)]
             bx = [fb+glm.rotate(x,prediction.theta) for x in bx]
             for p in bx:

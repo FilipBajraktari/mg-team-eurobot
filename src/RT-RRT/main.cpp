@@ -644,11 +644,12 @@ readStateFromDbus()
         li field;
         int xClose=-1;
         float Closest = -1.0f;
+        
         for(const auto &q : subset)
         {
             for(const auto &x: *q)
             {
-                if(Closest == -1.0f || Closest > dist2(Nodes[x],Robot) && !Blocked.count(x))
+                if((xClose == -1 || Closest > dist2(Nodes[x],Robot)) && !Blocked.count(x))
                 {
                     Closest = dist2(Nodes[x],Robot);
                     xClose = x;
@@ -661,6 +662,7 @@ readStateFromDbus()
         }
         else
         {
+            printf("Tp:{%i,%f,%f}\n",xClose, Nodes[xClose].x,Nodes[xClose].y);
             tpRoot(xClose);
         }
  
