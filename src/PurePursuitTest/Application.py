@@ -198,7 +198,7 @@ def WriteToFB():
         base+vec2(Robot.cm2p,-Robot.cm2p)*vec2((x[0]+250-1500)/10,(x[1]+250-1000)/10),
         base+vec2(Robot.cm2p,-Robot.cm2p)*vec2((y[0]+250-1500)/10,(y[1]+250-1000)/10),
         width=2)
-    for x in (FieldObjects+oponents): x.draw(__fb__)
+    for x in FieldObjects+oponents: x.draw(__fb__)
     
     return
 ## Robots ##
@@ -293,7 +293,7 @@ def pure_pursuit(iface):
 
 
 def rrtSend():
-    Obstacles = [(x.x * 10-250+1500,x.y * 10-250+1000,x.radius * 10) for x in (FieldObjects + oponents) if x!=friendBOT]
+    Obstacles = [(x.x * 10-250+1500,x.y * 10-250+1000,x.radius * 10) for x in FieldObjects + oponents if x!=friendBOT]
     if friendBOT == None: 
         return(1500-250,1000-250, fBgoal[0]*10+1500-250,fBgoal[1]*10+1000-250,[],0)
     return(friendBOT.x*10-250+1500,friendBOT.y*10-250+1000, fBgoal[0]*10-250+1500,fBgoal[1]*10-250+1000,Obstacles,len(Obstacles))
@@ -464,7 +464,7 @@ def predictPos(vL, vR, delta,friendBOT):
 def obstRoughDistance(prediction : RoboT,fiendBOT: RoboT,FielldObjects):
     global friendBOT,FieldObjects
     mindist = 100000
-    for FO in (FieldObjects+oponents):
+    for FO in FieldObjects+oponents:
         if (FO.x,FO.y) != (friendBOT.x,friendBOT.y):
             x = prediction.toLocalSystem((FO.x,FO.y))
             p = x
@@ -476,7 +476,7 @@ def obstRoughDistance(prediction : RoboT,fiendBOT: RoboT,FielldObjects):
 def obstDistance(prediction : RoboT,fiendBOT: RoboT,FielldObjects):
     global friendBOT,FieldObjects
     mindist = 100000
-    for FO in (FieldObjects+oponents):
+    for FO in FieldObjects+oponents:
         if (FO.x,FO.y) != (friendBOT.x,friendBOT.y):
             x = prediction.toLocalSystem((FO.x,FO.y))
             x.x += 6-23.5/2
