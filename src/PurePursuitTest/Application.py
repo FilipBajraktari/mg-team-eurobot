@@ -248,7 +248,7 @@ def pure_pursuit(iface):
     while True:
         if(not LOCALTESTING):
             oponentz = ifaceLidar.opponents_coordinates(1)
-            oponents = [RoboT((x[0],[1]),BotPic2,23) for x in oponentz]
+            oponents = [RoboT((x[0],x[1]),BotPic2,23) for x in oponentz]
         if state != RUNNING or estop: 
             if not LOCALTESTING:
                 my_drive.axis0.controller.input_vel = 0
