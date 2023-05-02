@@ -71,8 +71,10 @@ OBSTACLE = 4
 WAYPOINTS = 5
 ROBOT = 6
 
-
+estop = False
 state = PAUSED
+
+ifaceLidar = None
 #data = numpy.empty(WINDOW_SIZE[0]*WINDOW_SIZE[1]*4, dtype=numpy.int8)
 #cairo_surface = cairo.ImageSurface.create_for_data(data, cairo.FORMAT_ARGB32, WINDOW_SIZE[0], WINDOW_SIZE[1],*4)
 
@@ -82,6 +84,10 @@ state = PAUSED
 
 # TODO: Change wheel velocity to wheel rotational velocity
 
+def catchall_estop():
+    global estop
+    estop = not estop
+    return
 
 
 ## ROBOT PATH tracking
@@ -192,7 +198,7 @@ def WriteToFB():
         base+vec2(Robot.cm2p,-Robot.cm2p)*vec2((x[0]+250-1500)/10,(x[1]+250-1000)/10),
         base+vec2(Robot.cm2p,-Robot.cm2p)*vec2((y[0]+250-1500)/10,(y[1]+250-1000)/10),
         width=2)
-    for x in FieldObjects: x.draw(__fb__)
+    for x in (FieldObjects+oponents): x.draw(__fb__)
     
     return
 ## Robots ##
@@ -216,6 +222,7 @@ def catchall_new_lookahead(lookahead_postion):
     if friendBOT==None:
         return
     friendBOT.waypoints = [(x[0]/10*friendBOT.cm2p,x[1]/10*friendBOT.cm2p) for x in lookahead_postion]
+oponents = []
 
 def pure_pursuit(iface):
     if not LOCALTESTING:
@@ -223,7 +230,7 @@ def pure_pursuit(iface):
         my_drive = odrive.find_any()
     time.sleep(1) # Time to setup Glib mainloop
     
-    global friendBOT,BotList,FieldObjects,fBgoal,state
+    global friendBOT,BotList,FieldObjects,fBgoal,state, ifaceLidar,oponents
     PAUSED = 1
     RUNNING = 2
     SELECT = 3
@@ -238,8 +245,11 @@ def pure_pursuit(iface):
     clickMode = SELECT
     dt = 0
     selRobot = None
+    if(not LOCALTESTING):
+        oponentz = ifaceLidar.opponents_coordinates(1)
+        oponents = [RoboT((x[0],[1]),BotPic2,23) for x in oponentz]
     while True:
-        if state != RUNNING: 
+        if state != RUNNING or estop: 
             if not LOCALTESTING:
                 my_drive.axis0.controller.input_vel = 0
                 my_drive.axis1.controller.input_vel = 0
@@ -258,12 +268,12 @@ def pure_pursuit(iface):
             goal = None
             for wa in friendBOT.waypoints:
                 goal = wa
-                if gm.distance2(wa,(friendBOT.x,friendBOT.y))>min(400,obstDistance(friendBOT,friendBOT,FieldObjects)**2):
+                if gm.distance2(wa,(friendBOT.x,friendBOT.y))>min(400,obstDistance(friendBOT,friendBOT,None)**2):
                     break
             if goal!=None and (gm.distance2(friendBOT.waypoints[-1],(friendBOT.x,friendBOT.y))<400):
                 goal = friendBOT.waypoints[-1]
             if goal != None:
-                DWA(goal,friendBOT.waypoints[1%len(friendBOT.waypoints)])
+                DWA(goal,dt)
             #friendBOT.SetState(vl,vr)
             if NO_ODOMETRY:
                 friendBOT.move(dt)
@@ -277,12 +287,13 @@ def pure_pursuit(iface):
                     my_drive.axis1.controller.input_vel = friendBOT.vr/(8*numpy.pi)*6
                     #print(f1-time.time())
                 friendBOT.dmove(ncords[0], ncords[1], ncords[2])
+        
             
         print(1/dt)
 
 
 def rrtSend():
-    Obstacles = [(x.x * 10-250+1500,x.y * 10-250+1000,x.radius * 10) for x in FieldObjects if x!=friendBOT]
+    Obstacles = [(x.x * 10-250+1500,x.y * 10-250+1000,x.radius * 10) for x in (FieldObjects + oponents) if x!=friendBOT]
     if friendBOT == None: 
         return(1500-250,1000-250, fBgoal[0]*10+1500-250,fBgoal[1]*10+1000-250,[],0)
     return(friendBOT.x*10-250+1500,friendBOT.y*10-250+1000, fBgoal[0]*10-250+1500,fBgoal[1]*10-250+1000,Obstacles,len(Obstacles))
@@ -371,30 +382,29 @@ def thePyGameThread():
         pygame.display.update()
         __clock__.tick(60)
 
-def DWA(GoalPoint: gm.vec2,head):
+def DWA(GoalPoint: gm.vec2,dt):
     global friendBOT, BotList, FieldObjects
     MaxSpeed=30
     MaxTheta=numpy.deg2rad(40)
-    MaxAcceleration=50
-    #MaxTurnAcceleration=numpy.deg2rad(90)
+    MaxAcceleration=40
+    
     GoalMultiplier=8
     
     ObstacleMultiplier = 6666
     ObstacleRoughMultiplier = 1900
     ObstDistMultiplier = 900
-    #TargetVel = 12 * gm.length(gm.vec2(friendBOT.x,friendBOT.y)-GoalPoint)
+    
     VelocityMultiplier=0
-    p = friendBOT.toLocalSystem(GoalPoint)
+    p =friendBOT.toLocalSystem(GoalPoint)
     heading =gm.atan(p.y, p.x)
-    #TurningradiusMultiplier=1
-    #SmoothnesMultiplier=1
-    #OrientationMultiplier=1
+    
     HeadingMultiplier = 90
     SAFEDISTANCE=15
     vL = friendBOT.vl
     vR = friendBOT.vr
-    dt = 0.1
-    Steps = 8
+    #print(time.time()-self.t)
+    Steps = 0.8/dt
+    
     a = 2*MaxAcceleration/5
     vLposiblearray = [vL-MaxAcceleration*dt+a*dt*i for i in range(0,5)]
     vLposiblearray.append(vL)
@@ -426,7 +436,7 @@ def DWA(GoalPoint: gm.vec2,head):
                 DistCost = GoalMultiplier * DistImprovement
                 headingCost = headingImprovment * HeadingMultiplier
                 
-                if(obstacleDist < max(1,2*max(abs(vLposible),abs(vRposible))/MaxAcceleration)):
+                if(obstacleDist < max(1,(vLposible+vRposible))/MaxAcceleration):
                     obstacleRoughCost = ObstacleRoughMultiplier*max(1-obstacleRoughDist,(max(abs(vLposible),abs(vRposible))/MaxAcceleration-obstacleRoughDist))
                     obstacleCost = ObstacleMultiplier*max(1-obstacleRoughDist,(max(abs(vLposible),abs(vRposible))/MaxAcceleration-obstacleDist))
                 else:
@@ -454,23 +464,33 @@ def predictPos(vL, vR, delta,friendBOT):
 def obstRoughDistance(prediction : RoboT,fiendBOT: RoboT,FielldObjects):
     global friendBOT,FieldObjects
     mindist = 100000
-    for FO in FieldObjects:
+    for FO in (FieldObjects+oponents):
         if (FO.x,FO.y) != (friendBOT.x,friendBOT.y):
             x = prediction.toLocalSystem((FO.x,FO.y))
             p = x
-            mindist = min(mindist,  (gm.length(p)-FO.radius-25))
+            mindist = min(mindist,  (gm.length(p)-(FO.radius+1)-25))
+    fb = vec2(prediction.x,prediction.y)
+    a = (1500,1000) - abs(fb)-25
+    mindist = min(mindist,  min(a.x,a.y))
     return mindist
 def obstDistance(prediction : RoboT,fiendBOT: RoboT,FielldObjects):
     global friendBOT,FieldObjects
     mindist = 100000
-    for FO in FieldObjects:
+    for FO in (FieldObjects+oponents):
         if (FO.x,FO.y) != (friendBOT.x,friendBOT.y):
             x = prediction.toLocalSystem((FO.x,FO.y))
             x.x += 6-23.5/2
             b = gm.vec2(23.5/2,35/2)
             p = x
             d = abs(p)-b
-            mindist = min(mindist,  (gm.length(gm.max(d,0)) + min(max(d.x,d.y),0.0))-FO.radius)
+            mindist = min(mindist,  (gm.length(gm.max(d,0)) + min(max(d.x,d.y),0.0))-(FO.radius+1))
+    fb = vec2(prediction.x,prediction.y)
+    bx = [(-6,-17.5), (23.5-6,-17.5), (-6,17.5),(23.5-6,17.5)]
+    bx = [fb+gm.rotate(x,prediction.theta) for x in bx]
+    for p in bx:
+        b = (1500,1000)
+        d = abs(p) - b 
+        mindist = min(mindist,  -(gm.length(gm.max(d,0)) + min(max(d.x,d.y),0.0)))
     return mindist
 
     
@@ -481,6 +501,7 @@ def RtRRT():
     rt.startRRT(rrtSend, rrtRecv, rrtError)
 
 def main():
+    global ifaceLidar
     tr = threading.Thread(target=RtRRT)
     tr.daemon = True
     tr.start()
@@ -495,10 +516,14 @@ def main():
 
     remote_object = bus.get_object("com.mgrobotics.Service",
                                    "/StateSpace")
+    lidar_object = bus.get_object("com.mgrobotics.LidarService", "/Lidar")
     iface = dbus.Interface(remote_object, "com.mgrobotics.OdometryInterface")
+    ifaceLidar = dbus.Interface(lidar_object, "com.mgrobotics.LidarInterface")
     bus.add_signal_receiver(catchall_new_lookahead, dbus_interface = "com.mgrobotics.PurePursuit")
+    bus.add_signal_receiver(catchall_estop, dbus_interface = "com.mgrobotics.EmergencyStop")
 
     # Define a thread that will concurrently run with mainloop
+
     # This thread will handle Pure Pursuit algorithm
     t = threading.Thread(target=pure_pursuit, args=(iface,))
     t.daemon = True
